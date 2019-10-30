@@ -6,8 +6,8 @@ data-patterns
 .. image:: https://img.shields.io/pypi/v/data_patterns.svg
         :target: https://pypi.python.org/pypi/data_patterns
 
-.. image:: https://img.shields.io/travis/DeNederlandscheBank/data_patterns.svg
-        :target: https://travis-ci.org/DeNederlandscheBank/data_patterns
+.. image:: https://img.shields.io/travis/DeNederlandscheBank/data-patterns.svg
+        :target: https://travis-ci.org/DeNederlandscheBank/data-patterns
 
 .. image:: https://readthedocs.org/projects/data_patterns/badge/?version=latest
         :target: https://data_patterns.readthedocs.io/en/latest/?badge=latest
