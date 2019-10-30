@@ -1,6 +1,6 @@
-=======================
-insurance-solvency2-rfr
-=======================
+=============
+data-patterns
+=============
 
 
 .. image:: https://img.shields.io/pypi/v/data_patterns.svg
