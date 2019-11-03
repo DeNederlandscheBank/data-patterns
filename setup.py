@@ -36,7 +36,7 @@ setup(
     ],
     description="Package for generating and evaluating patterns in quantitative reports",
     install_requires=requirements,
-    license="MIT license",
+    license="MIT/X license",
     long_description=readme + '\n\n' + history,
     include_package_data=True,
     keywords='data_patterns',
