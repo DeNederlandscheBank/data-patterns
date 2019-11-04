@@ -99,11 +99,23 @@ class PatternMiner:
         assert self.df_patterns is not None, "No patterns defined."
         assert self.df_data is not None, "No data defined."
 
-        self.df_patterns = update_statistics(**kwargs, df_patterns = self.df_patterns, dataframe = self.df_data)
+        self.df_patterns = update_statistics(dataframe = self.df_data, df_patterns = self.df_patterns)
 
         df_results = derive_results(**kwargs, df_patterns = self.df_patterns, dataframe = self.df_data)
 
         return df_results
+
+    def update_statistics(self, *args, **kwargs):
+        '''
+        '''
+        self.__process_parameters(*args, **kwargs)
+
+        assert self.df_patterns is not None, "No patterns defined."
+        assert self.df_data is not None, "No data defined."
+
+        self.df_patterns = update_statistics(dataframe = self.df_data, df_patterns = self.df_patterns)
+
+        return self.df_patterns
 
     def convert_labels(self, df1, df2):
         ''' converts the column names of a pattern dataframe
@@ -120,6 +132,8 @@ class PatternMiner:
 
         if isinstance(self.metapatterns, dict):
             self.metapatterns = [self.metapatterns]
+
+        return None
 
     def __process_key(self, key, key_type, current, *args, **kwargs):
         '''
@@ -183,12 +197,12 @@ def pandas_expression(pattern, encode, result_type):
 
     if pattern[1] != '-->':
         if pattern[1]=="=":
-            if result_type == TEXT_EXCEPTION:
+            if result_type == False:
                 string_pattern = "!="
             else:
                 string_pattern = "=="
         elif pattern[1]=="sum":
-            if result_type == TEXT_EXCEPTION:
+            if result_type == False:
                 string_pattern = "!="
             else:
                 string_pattern = "=="
@@ -233,7 +247,7 @@ def pandas_expression(pattern, encode, result_type):
             if cond != column_Q[-1]:
                 condition_Q = condition_Q + ' & '
 
-        if result_type == TEXT_EXCEPTION:
+        if result_type == False:
             pandas_string = "df[" + condition_P + " & ~(" + condition_Q + ")]"
         else:
             pandas_string = "df[" + condition_P + " & (" + condition_Q + ")]"
@@ -251,8 +265,8 @@ def to_dataframe(patterns = None):
                 pattern_stats + 
                 [INITIAL_PATTERN_STATUS] + 
                 [encode] + 
-                [pandas_expression(pattern, encode, TEXT_CONFIRMATION)] +
-                [pandas_expression(pattern, encode, TEXT_EXCEPTION)] for [pattern_id, pattern, pattern_stats, encode] in patterns]
+                [pandas_expression(pattern, encode, True)] +
+                [pandas_expression(pattern, encode, False)] for [pattern_id, pattern, pattern_stats, encode] in patterns]
 
         df = PatternDataFrame(data = data, columns = PATTERNS_COLUMNS)
     else:
@@ -363,7 +377,7 @@ def derive_results(dataframe = None,
                 results_ex = eval(pandas_ex, ENCODINGS_DICT, {'df': df}).index.values.tolist()
                 results_co = eval(pandas_co, ENCODINGS_DICT, {'df': df}).index.values.tolist()
                 for i in results_ex:
-                    results.append(["exception", 
+                    results.append([False, 
                                                     df_patterns.loc[idx, "pattern_id"], 
                                                     df_patterns.loc[idx, "cluster"], 
                                                     str(i), 
@@ -379,7 +393,7 @@ def derive_results(dataframe = None,
                                                     df.loc[i, df_patterns.loc[idx, "P columns"]].values.tolist(), 
                                                     df.loc[i, df_patterns.loc[idx, "Q columns"]].values.tolist()])
                 for i in results_co:
-                    results.append(["confirmation", 
+                    results.append([True, 
                                                     df_patterns.loc[idx, "pattern_id"], 
                                                     df_patterns.loc[idx, "cluster"], 
                                                     str(i), 
@@ -432,8 +446,8 @@ def derive_association_patterns(metapattern = None,
 
     new_list = list()
 
-    p_part = metapattern.get(P_PART, None)
-    q_part = metapattern.get(Q_PART, None)
+    p_part = metapattern.get("P_columns", None)
+    q_part = metapattern.get("Q_columns", None)
 
     # there are four cases: 
     # - p and q are given, 
@@ -441,14 +455,14 @@ def derive_association_patterns(metapattern = None,
     # - q is given but p is not, 
     # - p and q are not given
     if ((p_part is None) and (q_part is not None)):
-        p_set = [col for col in dataframe.columns if col not in metapattern[Q_PART]]
+        p_set = [col for col in dataframe.columns if col not in metapattern["Q_columns"]]
         p_set = list(itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set))))
         for item in p_set:
-            metapattern[P_PART] = list(item)
+            metapattern["P_columns"] = list(item)
             new_patterns = derive_patterns_from_metapattern(struct = metapattern, dataframe = dataframe)
             new_list.extend(new_patterns)
     elif ((q_part is None) and (p_part is not None)):
-        q_set = [col for col in dataframe.columns if col not in metapattern[P_PART]]
+        q_set = [col for col in dataframe.columns if col not in metapattern["P_columns"]]
         q_set = list(itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set))))
         for item in q_set:
             metapattern[Q_PART] = list(item)
@@ -461,8 +475,8 @@ def derive_association_patterns(metapattern = None,
             q_set = [col for col in dataframe.columns if col not in p_item]
             q_set = list(itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set))))
             for q_item in q_set:
-                metapattern[Q_PART] = list(q_item)
-                metapattern[P_PART] = list(p_item)
+                metapattern["Q_columns"] = list(q_item)
+                metapattern["P_columns"] = list(p_item)
                 new_patterns = derive_patterns_from_metapattern(struct = metapattern, dataframe = dataframe)
                 new_list.extend(new_patterns)
     else:
@@ -478,8 +492,8 @@ def derive_patterns_from_metapattern(dataframe = None,
     ''' 
     '''
     # the struct contains the structure of the pattern as a dictionary
-    P = sorted(struct[P_PART])
-    Q = sorted(struct[Q_PART])
+    P = sorted(struct["P_columns"])
+    Q = sorted(struct["Q_columns"])
     df_features = dataframe.copy()
     # adding index levels to columns (in case the pattern contains index elements)
     for level in range(len(df_features.index.names)):
