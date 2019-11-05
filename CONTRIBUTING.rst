@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/DeNederlandscheBank/data_patterns/issues.
+Report bugs at https://github.com/DeNederlandscheBank/data-patterns/issues.
 
 If you are reporting a bug, please include:
 
@@ -35,31 +35,22 @@ Implement Features
 Look through the GitHub issues for features. Anything tagged with "enhancement"
 and "help wanted" is open to whoever wants to implement it.
 
-Write Documentation
-~~~~~~~~~~~~~~~~~~~
-
-data-patterns could always use more documentation, whether as part of the
-official data-patterns docs, in docstrings, or even on the web in blog posts,
-articles, and such.
-
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/DeNederlandscheBank/data_patterns/issues.
+The best way to send feedback is to file an issue at https://github.com/DeNederlandscheBank/data-patterns/issues.
 
 If you are proposing a feature:
 
 * Explain in detail how it would work.
 * Keep the scope as narrow as possible, to make it easier to implement.
-* Remember that this is a volunteer-driven project, and that contributions
-  are welcome :)
 
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `data_patterns` for local development.
+Ready to contribute? Here's how to set up `data-patterns` for local development.
 
-1. Fork the `data_patterns` repo on GitHub.
+1. Fork the `data-patterns` repo on GitHub.
 2. Clone your fork locally::
 
     $ git clone git@github.com:your_name_here/data_patterns.git
@@ -102,8 +93,8 @@ Before you submit a pull request, check that it meets these guidelines:
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
-3. The pull request should work for Python 2.7, 3.5, 3.6, 3.7 and 3.8, and for PyPy. Check
-   https://travis-ci.org/DeNederlandscheBank/data_patterns/pull_requests
+3. The pull request should work for Python 3.5, 3.6, 3.7 and 3.8, and for PyPy. Check
+   https://travis-ci.org/DeNederlandscheBank/data-patterns/pull_requests
    and make sure that the tests pass for all supported Python versions.
 
 Tips

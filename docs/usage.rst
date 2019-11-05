@@ -148,9 +148,10 @@ results in::
 
     'df[(df["Type"]=="life insurer") & ((data_patterns.reported(df["Assets"])=="reported") & (data_patterns.reported(df["Own funds"])=="reported") & (data_patterns.reported(df["TV-life"])=="reported") & (data_patterns.reported(df["TV-nonlife"])=="not reported"))]' 
 
-The code creates a boolean mask and it returns the dataframe with data for which the pattern holds.
+The code creates a boolean mask based on the pattern and returns the dataframe with data for which the pattern holds.
 
-Similarly, you can find the exceptions of the pattern with ``df_patterns.loc[0, 'pandas ex']``.
+Similarly, you can find the exceptions of a pattern with::
+    df_patterns.loc[0, 'pandas ex']
 
-We plan to provide codings of the pattern in other relevant packages.
+We plan to provide codings of the pattern based on other relevant packages.
 

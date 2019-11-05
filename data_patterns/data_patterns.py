@@ -196,24 +196,34 @@ def pandas_expression(pattern, encode, result_type):
     content_Q = pattern[5]
 
     if pattern[1] != '-->':
+
         if pattern[1]=="=":
-            if result_type == False:
-                string_pattern = "!="
+            pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
+            for p_item in column_P[1:]:
+                pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
+            pandas_string = pandas_string + ') - df["' + str(column_Q[0]) + '"] '
+
+            if result_type == True:
+                pandas_string = pandas_string + '< 1.5e-8]'
             else:
-                string_pattern = "=="
+                pandas_string = pandas_string + '>= 1.5e-8]'
+
         elif pattern[1]=="sum":
-            if result_type == False:
-                string_pattern = "!="
+            pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
+            for p_item in column_P[1:]:
+                pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
+            pandas_string = pandas_string + ') - df["' + str(column_Q[0]) + '"] '
+            if result_type == True:
+                pandas_string = pandas_string + '< 1.5e-8]'
             else:
-                string_pattern = "=="
+                pandas_string = pandas_string + '>= 1.5e-8]'
+
         else:
             string_pattern = str(pattern[1])
-
-        pandas_string = 'df[('
-        pandas_string = pandas_string + 'df["' + str(column_P[0]) + '"]'
-        for p_item in column_P[1:]:
-            pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
-        pandas_string = pandas_string + ")" + string_pattern + 'df["' + str(column_Q[0]) + '"]]'
+            pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
+            for p_item in column_P[1:]:
+                pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
+            pandas_string = pandas_string + ")" + string_pattern + 'df["' + str(column_Q[0]) + '"]]'
 
     else:
         # if condition
@@ -288,7 +298,7 @@ def update_statistics(dataframe = None,
 
         for idx in df_patterns.index:
 
-            if df_patterns.loc[idx, RELATION_TYPE]!="almost =":
+            if True:#df_patterns.loc[idx, RELATION_TYPE]!="=":
 
                 pandas_co = df_patterns.loc[idx, PANDAS_CO].replace("data_patterns.", "")
                 pandas_ex = df_patterns.loc[idx, PANDAS_EX].replace("data_patterns.", "")
@@ -304,35 +314,36 @@ def update_statistics(dataframe = None,
                 df_patterns.loc[idx, CONFIDENCE] = conf
                 df_new_patterns = df_patterns
 
-            else: # almost =
-                pattern_id = [df_patterns.loc[idx, PATTERN_ID], df_patterns.loc[idx, CLUSTER]]
-                pattern = [df_patterns.loc[idx, P_COLUMNS], 
-                           df_patterns.loc[idx, RELATION_TYPE], 
-                           df_patterns.loc[idx, Q_COLUMNS],
-                           df_patterns.loc[idx, P_PART], 
-                           df_patterns.loc[idx, RELATION], 
-                           df_patterns.loc[idx, Q_PART]]
+            # else: # =-pattern
+            #     pattern_id = [df_patterns.loc[idx, PATTERN_ID], df_patterns.loc[idx, CLUSTER]]
+            #     pattern = [df_patterns.loc[idx, P_COLUMNS], 
+            #                df_patterns.loc[idx, RELATION_TYPE], 
+            #                df_patterns.loc[idx, Q_COLUMNS],
+            #                df_patterns.loc[idx, P_PART], 
+            #                df_patterns.loc[idx, RELATION], 
+            #                df_patterns.loc[idx, Q_PART]]
 
-                new_patterns = list()
-                preprocess_operator = preprocess[pattern[1]]
-                c0 = dataframe.columns.get_loc(pattern[0][0]) # assuming only one element in lhs
-                c1 = dataframe.columns.get_loc(pattern[2][0]) # assuming only one element in rhs
-                nonzero = (dataframe.values != 0).T
-                data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
-                data_array = dataframe.values[data_filter].T
-                if data_array.size:
-                    #confirmations of the pattern, a list of booleans
-                    co = (np.abs(1 - data_array[c0,:] / data_array[c1,:]) <= 0.01)
-                    pattern_data = derive_pattern_data(dataframe,
-                                         [dataframe.columns[c0]], 
-                                         [dataframe.columns[c1]], 
-                                         pattern[1],
-                                         pattern_id[1],
-                                         co, 
-                                         0, 
-                                         data_filter)
-                    new_patterns.append(pattern_data)
-                df_new_patterns = to_dataframe(new_patterns)
+            #     new_patterns = list()
+            #     preprocess_operator = preprocess[pattern[1]]
+            #     c0 = dataframe.columns.get_loc(pattern[0][0]) # assuming only one element in lhs
+            #     c1 = dataframe.columns.get_loc(pattern[2][0]) # assuming only one element in rhs
+            #     nonzero = (dataframe.values != 0).T
+            #     data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
+            #     data_array = dataframe.values[data_filter].T
+            #     if data_array.size:
+            #         #confirmations of the pattern, a list of booleans
+            #         decimal = 8 # not yet read from parameters
+            #         co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
+            #         pattern_data = derive_pattern_data(dataframe,
+            #                              [dataframe.columns[c0]], 
+            #                              [dataframe.columns[c1]], 
+            #                              pattern[1],
+            #                              pattern_id[1],
+            #                              co, 
+            #                              0, 
+            #                              data_filter)
+            #         new_patterns.append(pattern_data)
+            #     df_new_patterns = to_dataframe(new_patterns)
 
         for level in range(len(dataframe.index.names)):
             del dataframe[dataframe.index.names[level]]
@@ -587,7 +598,6 @@ preprocess = {'>':   operator.and_,
               '=' :  operator.and_,
               '!=':  operator.and_,
               'sum': operator.and_,
-              'almost =': operator.and_,
               '<->': operator.or_, 
               '-->': operator.or_}
 
@@ -622,7 +632,7 @@ def derive_pattern_data(df,
 
 def get_parameters(parameters):
     confidence = parameters.get("min_confidence", 0.75)
-    support = parameters.get("min_support", 1)
+    support = parameters.get("min_support", 2)
     return confidence, support
 
 # generate patterns of the form [c1] operator value where c1 is in columns
@@ -660,6 +670,7 @@ def patterns_column_column(dataframe  = None,
     ''' 
     '''
     confidence, support = get_parameters(parameters)
+    decimal = parameters.get("decimal", 8)
     preprocess_operator = preprocess[pattern]
     initial_data_array = dataframe.values.T
     # set up boolean masks for nonzero items per column
@@ -673,43 +684,10 @@ def patterns_column_column(dataframe  = None,
                     data_array = initial_data_array[:, data_filter]
                     if data_array.any():
                         # confirmations of the pattern, a list of booleans
-                        co = reduce(operators[pattern], data_array[[c0, c1], :])
-                        pattern_data = derive_pattern_data(dataframe,
-                                            [dataframe.columns[c0]], 
-                                            [dataframe.columns[c1]], 
-                                            pattern,
-                                            pattern_name,
-                                            co, 
-                                            confidence, 
-                                            data_filter)
-                        if pattern_data and len(co) >= support:
-                            yield pattern_data
-
-def patterns_column_column_almost(dataframe  = None,
-                                  pattern    = None,
-                                  pattern_name = "column",
-                                  P_columns  = None, 
-                                  Q_columns  = None, 
-                                  parameters = {}):
-    ''' 
-    '''
-    confidence, support = get_parameters(parameters)
-    almost_threshold = parameters.get("almost_threshold", 0.01)
-    preprocess_operator = preprocess[pattern]
-    initial_data_array = dataframe.values.T
-    # set up boolean masks for nonzero items per column
-    nonzero = initial_data_array != 0
-    for c0 in P_columns:
-        for c1 in Q_columns:
-            if c0 != c1:
-                # applying the filter
-                data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
-                if data_filter.any():
-                    data_array = initial_data_array[:, data_filter]
-                    if data_array.any():
-                        # confirmations of the pattern, a list of booleans
-                        co = (np.abs(1 - data_array[c0,:] / data_array[c1,:]) <= almost_threshold)
-#                        reduce(operators[pattern], data_array[[c0, c1], :])
+                        if pattern == "=":
+                            co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
+                        else:
+                            co = reduce(operators[pattern], data_array[[c0, c1], :])
                         pattern_data = derive_pattern_data(dataframe,
                                             [dataframe.columns[c0]], 
                                             [dataframe.columns[c1]], 
@@ -729,6 +707,7 @@ def patterns_sums_column(dataframe  = None,
     '''
     confidence, support = get_parameters(parameters)
     sum_elements = parameters.get("sum_elements", 2)
+    decimal = parameters.get("decimal", 0)
     preprocess_operator = preprocess[pattern]
     data_array = dataframe.values.T
     # set up boolean masks for nonzero items per column
@@ -752,7 +731,7 @@ def patterns_sums_column(dataframe  = None,
                 if data_array.size:
                     # determine sum of columns in subset
                     data_array[sum_col, :] = -data_array[sum_col, :]
-                    co = (abs(reduce(operator.add, data_array[subset, :])) < 1)
+                    co = (abs(reduce(operator.add, data_array[subset, :])) < 1.5 * 10**(-decimal))
                     pattern_data = derive_pattern_data(dataframe, 
                                         [dataframe.columns[c] for c in sum_parts],
                                         [dataframe.columns[sum_col]],
@@ -819,13 +798,6 @@ def derive_quantitative_patterns(dataframe    = None,
                                        pattern = pattern,
                                        pattern_name = pattern_name,
                                        parameters = parameters) 
-    elif pattern == 'almost =':
-        results = patterns_column_column_almost(dataframe = dataframe,
-                                                pattern = pattern, 
-                                                pattern_name = pattern_name,
-                                                P_columns = P_columns,
-                                                Q_columns = Q_columns,
-                                                parameters = parameters)
     # everything else -> c1 pattern c2
     else:
         results = patterns_column_column(dataframe = dataframe,
