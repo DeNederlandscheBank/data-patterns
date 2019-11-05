@@ -23,6 +23,7 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 
 import data_patterns
+import xlsxwriter
 
 # -- General configuration ---------------------------------------------
 
