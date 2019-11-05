@@ -5,15 +5,13 @@ data-patterns
 
 .. image:: https://img.shields.io/pypi/v/data_patterns.svg
         :target: https://pypi.python.org/pypi/data_patterns
-
+        :alt: Pypi Version
 .. image:: https://img.shields.io/travis/DeNederlandscheBank/data-patterns.svg
         :target: https://travis-ci.org/DeNederlandscheBank/data-patterns
-
+        :alt: Build Status
 .. image:: https://readthedocs.org/projects/data_patterns/badge/?version=latest
         :target: https://data_patterns.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
-
-
 
 
 Package for generating and evaluating data-patterns in quantitative reports
@@ -25,7 +23,10 @@ Package for generating and evaluating data-patterns in quantitative reports
 Features
 --------
 
-TODO
+Here is what the package does:
+
+- Generating and evaluating data-patterns in Pandas DataFrames and exporting them to Excel and JSON
+- Evaluating supervisory reporting data with data quality rules published by De Nederlandsche Bank (to be provided)
 
 Overview
 --------
