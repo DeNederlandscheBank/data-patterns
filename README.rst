@@ -17,7 +17,7 @@ data-patterns
 Package for generating and evaluating data-patterns in quantitative reports
 
 * Free software: MIT/X license
-* Documentation: https://data_patterns.readthedocs.io.
+* Documentation: https://data-patterns.readthedocs.io.
 
 
 Features
