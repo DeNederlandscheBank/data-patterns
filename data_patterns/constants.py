@@ -3,7 +3,7 @@
 
 __author__ = """De Nederlandsche Bank"""
 __email__ = 'ECDB_berichten@dnb.nl'
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 PATTERN_ID       	   		= "pattern_id"
 CLUSTER          	   		= "cluster"
