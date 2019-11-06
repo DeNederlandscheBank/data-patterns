@@ -28,8 +28,8 @@ Here is what the package does:
 - Generating and evaluating patterns in Pandas DataFrames and exporting them to Excel and JSON
 - Evaluating reporting data with data quality rules published by De Nederlandsche Bank (to be provided)
 
-Overview
---------
+Quick overview
+--------------
 
 To install the package
 
@@ -64,8 +64,6 @@ To generate patterns use the find-function of this object::
                               'parameters': {"min_confidence": 0.5,
                                              "min_support"   : 2}})
 
-The name of the pattern is shown in the output. It is not necessary to include a name.
-
 The result is a DataFrame with the patterns that were found. The first part of the DataFrame now contains
 
 +----+--------------+------------+--------------+------------+--------+-----------+----------+
@@ -92,5 +90,7 @@ The result is a DataFrame with the results. If we select ``result_type = False``
 |Insurer 10 |False         |equal values |[Excess]    |=            |[Own funds] |[199.99] |[200]    |
 +-----------+--------------+-------------+------------+-------------+------------+---------+---------+
 
-Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum' (see below), and '-->' (association, see below).
+Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum', and '-->'. 
+
+Read the documentation for more features.
 
