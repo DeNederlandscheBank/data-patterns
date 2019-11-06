@@ -72,13 +72,13 @@ Setting the parameters dict
 
 Specific parameters of a pattern can be set with a parameters dict. ``min_confidence`` defines the minimum confidence of the patterns to be included in the output and ``min_support`` defines the minimum support of the patterns. 
 
-For the =-patterns, you can set the number of decimals for the equality between the values with ``decimals``. So::
+For the =-patterns, you can set the number of decimals for the equality between the values with ``decimal``. So::
 
     df_patterns = miner.find({'name'      : 'equal values', 
                               'pattern'   : '=',
                               'parameters': {"min_confidence": 0.5,
                                              "min_support"   : 2,
-                                             "decimals"      : 0}})
+                                             "decimal"       : 0}})
 
 would output
 
