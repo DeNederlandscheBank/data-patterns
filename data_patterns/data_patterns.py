@@ -218,8 +218,10 @@ def to_dataframe(patterns = None, parameters = {}):
                 [pandas_expression(pattern, encode, False, parameters)] for [pattern_id, pattern, pattern_stats, encode] in patterns]
 
         df = PatternDataFrame(data = data, columns = PATTERNS_COLUMNS)
+        df.index.name = 'index'
     else:
         df = PatternDataFrame(columns = PATTERNS_COLUMNS)
+        df.index.name = 'index'
 
     return df
 

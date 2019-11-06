@@ -55,7 +55,7 @@ To analyze data with the generated set of data-patterns use the analyze function
 
     df_results = miner.analyze(df)
 
-The result is a DataFrame with the results. The first part of the DataFrame now contains
+The result is a DataFrame with the results. If we select ``result_type = False`` then the first part of the output contains
 
 +-----------+--------------+-------------+------------+-------------+------------+---------+---------+
 |index      |result_type   |pattern_id   |P columns   |relation type|Q columns   |P values |Q values |
