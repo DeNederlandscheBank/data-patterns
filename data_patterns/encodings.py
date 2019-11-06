@@ -7,7 +7,7 @@ import pandas as pd
 
 __author__ = """De Nederlandsche Bank"""
 __email__ = 'ECDB_berichten@dnb.nl'
-__version__ = ''0.1.2'1'
+__version__ = ''0.1.3'1'
 
 def percentage(c):
     encoded = ["= 100%" if i == 1 else 
