@@ -97,7 +97,7 @@ class PatternMiner:
         return df_results
 
     def update_statistics(self, *args, **kwargs):
-        '''
+        '''Function that updates the pattern statistics in df_patterns
         '''
         self.__process_parameters(*args, **kwargs)
 
@@ -114,7 +114,7 @@ class PatternMiner:
         return to_dataframe(patterns = convert_columns(self.df_patterns, df1, df2))
 
     def __process_parameters(self, *args, **kwargs):
-        '''
+        '''Update variables in the object
         '''
         self.metapatterns = self.__process_key('metapatterns', dict, self.metapatterns, *args, **kwargs)
         self.metapatterns = self.__process_key('metapatterns', list, self.metapatterns, *args, **kwargs)
