@@ -53,7 +53,7 @@ Ready to contribute? Here's how to set up `data-patterns` for local development.
 1. Fork the `data-patterns` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/data_patterns.git
+    $ git clone git@github.com:DeNederlandscheBank/data-patterns.git
 
 3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
 
@@ -108,8 +108,7 @@ To run a subset of tests::
 Deploying
 ---------
 
-A reminder for the maintainers on how to deploy.
-Make sure all your changes are committed (including an entry in HISTORY.rst).
+A reminder for the maintainers on how to deploy. Make sure all your changes are committed (including an entry in HISTORY.rst).
 Then run::
 
 $ bump2version patch # possible: major / minor / patch

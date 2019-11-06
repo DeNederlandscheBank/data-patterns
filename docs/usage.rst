@@ -37,11 +37,9 @@ To generate patterns use the find-function of this object::
                               'parameters': {"min_confidence": 0.5,
                                              "min_support"   : 2}})
 
-The name of the pattern is shown in the output. It is not necessary to include a name. Also, you do not have to include a paramaters-dict. The parameters have default setting with ``min_confidence = 0.75`` and ``min_support = 2``.
+The name of the pattern is shown in the output. It is not necessary to include a name.
 
-You can start the find-function with a dictionary (with one pattern definition) or a list of dictionaries (with a list of pattern definitions).
-
-The result is a Pandas DataFrame with the patterns. (Actually the type of df_patterns is a subclass of a DataFrame with a specialized to_excel function.) The first part of the DataFrame now contains
+The result is a DataFrame with the patterns that were found. The first part of the DataFrame now contains
 
 +----+--------------+------------+--------------+------------+--------+-----------+----------+
 | id |pattern_id    |P columns   |relation type |Q columns   |support |exceptions |confidence|
@@ -51,13 +49,13 @@ The result is a Pandas DataFrame with the patterns. (Actually the type of df_pat
 |  1 |equal values  |[Excess]    |=             |[Own funds] |9       |1          |0.9       | 
 +----+--------------+------------+--------------+------------+--------+-----------+----------+
 
-The miner finds two data-patterns with the equal-pattern. The first states that the 'Own funds'-column is identical to the 'Excess'-column in 9 of the 10 cases, so with a confidence of 90 %. There is one case where the equal-pattern does not hold. The second data-pattern is identical to the first but with the columns reversed.
+The miner finds two patterns; the first states that the 'Own funds'-column is identical to the 'Excess'-column in 9 of the 10 cases (with a confidence of 90 %, there is one case where the equal-pattern does not hold), and the second pattern is identical to the first but with the columns reversed.
 
-To analyze data with the generated set of data-patterns use::
+To analyze data with the generated set of data-patterns use the analyze function with the dataframe with the data as input::
 
     df_results = miner.analyze(df)
 
-The result is a DataFrame with the results. It contains
+The result is a DataFrame with the results. The first part of the DataFrame now contains
 
 +-----------+--------------+-------------+------------+-------------+------------+---------+---------+
 |index      |result_type   |pattern_id   |P columns   |relation type|Q columns   |P values |Q values |
@@ -69,10 +67,39 @@ The result is a DataFrame with the results. It contains
 
 Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum' (see below), and '-->' (association, see below).
 
+Setting the parameters dict
+---------------------------
+
+Specific parameters of a pattern can be set with a parameters dict. ``min_confidence`` defines the minimum confidence of the patterns to be included in the output and ``min_support`` defines the minimum support of the patterns. 
+
+For the =-patterns, you can set the number of decimals for the equality between the values with ``decimals``. So::
+
+    df_patterns = miner.find({'name'      : 'equal values', 
+                              'pattern'   : '=',
+                              'parameters': {"min_confidence": 0.5,
+                                             "min_support"   : 2,
+                                             "decimals"      : 0}})
+
+would output
+
++----+--------------+------------+--------------+------------+--------+-----------+----------+
+| id |pattern_id    |P columns   |relation type |Q columns   |support |exceptions |confidence|
++====+==============+============+==============+============+========+===========+==========+
+|  0 |equal values  |[Own funds] |=             |[Excess]    |10      |0          |1.0       |
++----+--------------+------------+--------------+------------+--------+-----------+----------+
+|  1 |equal values  |[Excess]    |=             |[Own funds] |10      |0          |1.0       | 
++----+--------------+------------+--------------+------------+--------+-----------+----------+
+
+because 199.99 is equal to 200 with 0 decimals.
+
+The default value in the =-pattern is 8 decimals.
+
+You do not have to include a paramaters dict. The parameters have default setting with ``min_confidence = 0.75`` and ``min_support = 2``.
+
 Using the sum-pattern
 ---------------------
 
-With the sum-pattern you can find columns whose values are the sum of other columns. For example::
+With the sum-pattern you can find columns whose values are the sum of the values of other columns. For example::
 
     df_patterns = miner.find({'name'      : 'sum pattern',
                               'pattern'   : 'sum',
@@ -93,7 +120,14 @@ results in a DataFrame with
 |3   |sum pattern   |[TV-nonlife, Excess]    |sum           |[Assets]    |4       |1          |0.8       |
 +----+--------------+------------------------+--------------+------------+--------+-----------+----------+
 
+The miner finds four sums; apparently the 'TV-life'-column plus the 'Own funds'-columns is a sum of the 'Assets'-columns.
+
 With an additional parameter ``sum_elements`` you can specify the highest number of elements in the P_columns. But handle with care because to find a high number of elements can take a lot of time. The default value of ``sum_elements`` is 2.
+
+Finding a list of patterns
+--------------------------
+
+You can start the find-function with a dictionary (with one pattern definition) or a list of dictionaries (with a list of pattern definitions).
 
 Exporting to and importing from Excel
 -------------------------------------
@@ -151,6 +185,7 @@ results in::
 The code creates a boolean mask based on the pattern and returns the dataframe with data for which the pattern holds.
 
 Similarly, you can find the exceptions of a pattern with::
+
     df_patterns.loc[0, 'pandas ex']
 
 We plan to provide codings of the pattern based on other relevant packages.
