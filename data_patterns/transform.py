@@ -11,7 +11,7 @@ from .constants import *
 
 __author__ = """De Nederlandsche Bank"""
 __email__ = 'ECDB_berichten@dnb.nl'
-__version__ = '0.1.9'
+__version__ = '0.1.10'
 
 class PatternDataFrame(pd.DataFrame):
     ''' 
