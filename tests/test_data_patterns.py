@@ -53,4 +53,4 @@ class TestData_patterns(unittest.TestCase):
 
         # Assert
         self.assertEqual(type(actual), type(expected), "Pattern test 1: types do not match")
-        pd.testing.assert_frame_equal(actual, expected, check_names = False)
+        pd.testing.assert_frame_equal(actual, expected)
