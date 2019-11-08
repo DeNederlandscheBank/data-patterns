@@ -103,11 +103,11 @@ class ResultDataFrame(pd.DataFrame):
                                        'valign'   : 'top', 
                                        'align'    : 'left', 
                                        'text_wrap': True})
-        if len(self.index) > 0:
+        if len(self.index) > 0:s
             for pattern_id in self[PATTERN_ID].unique():
-                co = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE]==TEXT_CONFIRMATION)]
+                co = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE]==True)]
                 co = co.drop([PATTERN_ID, RESULT_TYPE], axis = 1)
-                ex = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE]==TEXT_EXCEPTION)]
+                ex = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE]==False)]
                 ex = ex.drop([PATTERN_ID, RESULT_TYPE], axis = 1)
                 if len(co.index) > 0:
                     co.to_excel(writer, sheet_name = pattern_id + SHEET_NAME_POST_CO, merge_cells = False)

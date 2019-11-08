@@ -283,7 +283,7 @@ def derive_results(dataframe = None,
                     results.append([False, 
                                                     df_patterns.loc[idx, "pattern_id"], 
                                                     df_patterns.loc[idx, "cluster"], 
-                                                    str(i), 
+                                                    i, 
                                                     df_patterns.loc[idx, "support"], 
                                                     df_patterns.loc[idx, "exceptions"], 
                                                     df_patterns.loc[idx, "confidence"], 
@@ -299,7 +299,7 @@ def derive_results(dataframe = None,
                     results.append([True, 
                                                     df_patterns.loc[idx, "pattern_id"], 
                                                     df_patterns.loc[idx, "cluster"], 
-                                                    str(i), 
+                                                    i, 
                                                     df_patterns.loc[idx, "support"], 
                                                     df_patterns.loc[idx, "exceptions"], 
                                                     df_patterns.loc[idx, "confidence"], 
@@ -325,6 +325,7 @@ def derive_patterns_from_metapattern(dataframe = None,
                                      metapattern = None):
     ''' 
     '''
+    confidence, support = get_parameters(parameters)
     # the metapattern contains the structure of the pattern as a dictionary
     P = sorted(metapattern["P_columns"])
     Q = sorted(metapattern["Q_columns"])
@@ -359,7 +360,7 @@ def derive_patterns_from_metapattern(dataframe = None,
                 df_ex = pd.DataFrame()
                 n_ex = 0
             conf = n_co / total
-            if conf >= metapattern.get('threshold', 0.75):
+            if ((conf >= confidence) and (n_co >= support)):
                 encode_str = '{}'
                 if ENCODE in metapattern.keys():
                     encode_str = str(metapattern[ENCODE])

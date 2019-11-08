@@ -62,7 +62,11 @@ EEA_countries = ['AUSTRIA',
                  'UNITED KINGDOM']
 
 def EEA_country(iterable):
-    return ["EEA" if (i in EEA_countries) else "non-EEA" for i in iterable]
+    if not isinstance(c, pd.Series):
+        encoded = ["EEA" if (i in EEA_countries) else "non-EEA" for i in iterable]
+    else:
+        encoded = pd.Series(index = iterable.index, data = ["EEA" if (i in EEA_countries) else "non-EEA" for i in iterable])
+    return encoded
 
 ENCODINGS_DICT = {'percentage' : percentage,
                   'reported'   : reported,
