@@ -7,7 +7,7 @@ History
 
 * Development release.
 
-0.1.11 (2019-6-11)
+0.1.11 (2019-11-6)
 ------------------
 
 * First release on PyPI.
