@@ -103,7 +103,7 @@ class ResultDataFrame(pd.DataFrame):
                                        'valign'   : 'top', 
                                        'align'    : 'left', 
                                        'text_wrap': True})
-        if len(self.index) > 0:s
+        if len(self.index) > 0:
             for pattern_id in self[PATTERN_ID].unique():
                 co = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE]==True)]
                 co = co.drop([PATTERN_ID, RESULT_TYPE], axis = 1)
