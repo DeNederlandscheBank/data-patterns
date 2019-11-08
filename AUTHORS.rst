@@ -13,4 +13,7 @@ Development Lead
 Contributors
 ------------
 
+* Annick van Ool
+* Céline Hameleers
+
 Your name could be here, see how to `contribute <https://github.com/DeNederlandscheBank/data-patterns/blob/master/CONTRIBUTING.rst>`_
