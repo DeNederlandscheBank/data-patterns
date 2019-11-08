@@ -325,7 +325,7 @@ def derive_patterns_from_metapattern(dataframe = None,
                                      metapattern = None):
     ''' 
     '''
-    confidence, support = get_parameters(parameters)
+    confidence, support = get_parameters(metapattern.get("parameters", None))
     # the metapattern contains the structure of the pattern as a dictionary
     P = sorted(metapattern["P_columns"])
     Q = sorted(metapattern["Q_columns"])
