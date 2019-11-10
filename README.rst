@@ -12,7 +12,9 @@ data-patterns
 .. image:: https://readthedocs.org/projects/data-patterns/badge/?version=latest
         :target: https://data-patterns.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
-
+.. image:: https://img.shields.io/badge/License-MIT/X-blue.svg
+        :target: https://github.com/DeNederlandscheBank/data-patterns/blob/master/LICENSE
+        :alt: License
 
 Package for generating and evaluating data-patterns in quantitative reports
 
