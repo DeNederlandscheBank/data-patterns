@@ -20,6 +20,8 @@ PATTERN_STATUS   	   		= "pattern status"
 ENCODINGS        	   		= "encodings"
 PANDAS_CO					= "pandas co"
 PANDAS_EX					= "pandas ex"
+XBRL_CO						= "xbrl co"
+XBRL_EX						= "xbrl ex"
 
 RESULT_TYPE      	   		= 'result_type'
 INDEX            	   		= "index"
@@ -38,7 +40,7 @@ SHEET_NAME_POST_EX     		= "_ex"
 
 PATTERNS_COLUMNS 	   		= [PATTERN_ID, CLUSTER, 
 					  		   P_COLUMNS, RELATION_TYPE, Q_COLUMNS, P_PART, RELATION, Q_PART, 
-                    	  	   SUPPORT, EXCEPTIONS, CONFIDENCE, PATTERN_STATUS, ENCODINGS, PANDAS_CO, PANDAS_EX]
+                    	  	   SUPPORT, EXCEPTIONS, CONFIDENCE, PATTERN_STATUS, ENCODINGS, PANDAS_CO, PANDAS_EX, XBRL_CO, XBRL_EX]
      
 RESULTS_COLUMNS        		= [RESULT_TYPE, PATTERN_ID, CLUSTER, INDEX, SUPPORT, EXCEPTIONS, CONFIDENCE, 
                     	  	   P_COLUMNS, RELATION_TYPE, Q_COLUMNS, P_PART, RELATION, Q_PART, P_VALUES, Q_VALUES]

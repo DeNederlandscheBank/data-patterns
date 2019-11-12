@@ -171,22 +171,44 @@ This pattern-definition finds association patterns ('-->') between 'Type' and wh
 
 So the pattern is that life insurers report Assets, TV-life, and Own funds and nonlife insurers report Assets, TV-nonlife and Own funds. There is one life insurer that does not report according to these patterns.
 
-Retrieving the pattern in Pandas-code
--------------------------------------
+Retrieving the pattern in XBRL
+------------------------------
+
+The DataFrame ``df_patterns`` contains the patterns represented by as XBRL validation rules. The syntax of the rule follows EIOPA Solvency II validation syntax. To get the code of the first row of the patterns use::
+
+    df_patterns.loc[0, 'xbrl co']
+
+This results in the following string::
+
+    IF (({Type} = "life insurer")) THEN ("Assets" = "reported") and 
+    ("Own funds" = "reported") and 
+    ("TV-life" = "reported") and ("TV-nonlife" = "not reported")
+
+This assumes that the column names of the DataFrame with which the patterns are produced are defined in the XBRL-taxonomy.
+
+TODO: test all pattern definitions, include encodings into the XBRL-code
+
+Retrieving the pattern in Pandas
+--------------------------------
 
 The df_patterns-dataframe contains the code of the pattern in Pandas::
 
     df_patterns.loc[0, 'pandas co']
 
-results in::
+results in the following string::
 
-    'df[(df["Type"]=="life insurer") & ((data_patterns.reported(df["Assets"])=="reported") & (data_patterns.reported(df["Own funds"])=="reported") & (data_patterns.reported(df["TV-life"])=="reported") & (data_patterns.reported(df["TV-nonlife"])=="not reported"))]' 
+    df[(df["Type"]=="life insurer") & ((data_patterns.reported(df["Assets"])=="reported") & 
+    (data_patterns.reported(df["Own funds"])=="reported") & 
+    (data_patterns.reported(df["TV-life"])=="reported") & 
+    (data_patterns.reported(df["TV-nonlife"])=="not reported"))]
 
 The code creates a boolean mask based on the pattern and returns the dataframe with data for which the pattern holds.
 
 Similarly, you can find the exceptions of a pattern with::
 
     df_patterns.loc[0, 'pandas ex']
+
+
 
 We plan to provide codings of the pattern based on other relevant packages.
 

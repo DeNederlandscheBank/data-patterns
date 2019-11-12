@@ -27,7 +27,8 @@ Features
 
 Here is what the package does:
 
-- Generating and evaluating patterns in structured datasets and exporting them to Excel and JSON
+- Generating and evaluating patterns in structured datasets and exporting to Excel and JSON
+- Transforming generated patterns into XBRL validation rules and Pandas code
 - Evaluating reporting data with data quality rules published by De Nederlandsche Bank (to be provided)
 
 Quick overview

@@ -214,8 +214,10 @@ def to_dataframe(patterns = None, parameters = {}):
                 pattern_stats + 
                 [INITIAL_PATTERN_STATUS] + 
                 [encode] + 
-                [pandas_expression(pattern, encode, True, parameters)] +
-                [pandas_expression(pattern, encode, False, parameters)] for [pattern_id, pattern, pattern_stats, encode] in patterns]
+                [to_pandas_expression(pattern, encode, True, parameters)] +
+                [to_pandas_expression(pattern, encode, False, parameters)] +
+                [to_xbrl_expression(pattern,encode, True, parameters)] + 
+                [to_xbrl_expression(pattern,encode, False, parameters)] for [pattern_id, pattern, pattern_stats, encode] in patterns]
 
         df = PatternDataFrame(data = data, columns = PATTERNS_COLUMNS)
         df.index.name = 'index'
@@ -661,7 +663,7 @@ def evaluate_excel_string(s):
     else:
         return s
 
-def formula_expression(pattern):
+def to_xbrl_expression(pattern, encode, result_type, parameters):
     '''
     '''
     # the column name
@@ -700,7 +702,7 @@ def formula_expression(pattern):
 
     return formula_string
 
-def pandas_expression(pattern, encode, result_type, parameters):
+def to_pandas_expression(pattern, encode, result_type, parameters):
     '''
     '''
     # the column name
