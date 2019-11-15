@@ -43,7 +43,7 @@ class PatternDataFrame(pd.DataFrame):
                                        'valign'   : 'top', 
                                        'align'    : 'left', 
                                        'text_wrap': True})
-        if len(self.index) > 0:
+        if not self.empty:
             df = super(PatternDataFrame, self).copy()
             # make sure that the '='-sign is read properly by Excel
             df[RELATION_TYPE] = "'" + df[RELATION_TYPE]
@@ -103,15 +103,15 @@ class ResultDataFrame(pd.DataFrame):
                                        'valign'   : 'top', 
                                        'align'    : 'left', 
                                        'text_wrap': True})
-        if len(self.index) > 0:
+        if not self.empty:
             for pattern_id in self[PATTERN_ID].unique():
-                co = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE]==True)]
+                co = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE])]
                 co = co.drop([PATTERN_ID, RESULT_TYPE], axis = 1)
-                ex = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE]==False)]
+                ex = self[(self[PATTERN_ID]==pattern_id) & (~self[RESULT_TYPE])]
                 ex = ex.drop([PATTERN_ID, RESULT_TYPE], axis = 1)
-                if len(co.index) > 0:
+                if not co.empty:
                     co.to_excel(writer, sheet_name = pattern_id + SHEET_NAME_POST_CO, merge_cells = False)
-                if len(ex.index) > 0:
+                if not ex.empty:
                     ex.to_excel(writer, sheet_name = pattern_id + SHEET_NAME_POST_EX, merge_cells = False)
         for name in writer.sheets:
             worksheet = writer.sheets[name]
@@ -136,41 +136,4 @@ class ResultDataFrame(pd.DataFrame):
             worksheet.set_column(levels+12, levels+12, 40)
         writer.save()
         writer.close()
-        return None
-
-    # obsolete function
-    def to_excel_old(self, path, filename, format = "separate"):
-        if format == "separate":
-            # level 1 is the year
-            level_1 = self.result_dataframe.index.get_level_values(1).unique()    
-            for year in level_1:
-                file = filename + '-' + str(year)[0:4] + '.xlsx'
-                df_r = self.result_dataframe.xs(year, axis = 0, level = 1, drop_level = False)
-                if len(df_r.index) > 0:
-                    to_excel(structs  = self.metapatterns, 
-                             df_patterns = self.pattern_dataframe,
-                             df_patterns_short = self.pattern_dataframe_short,
-                             df_results  = df_r, 
-                             path     = path, 
-                             filename = file)
-                if year == level_1[-1]: # if last year then create files per entity
-                    name_list = self.result_dataframe.index.get_level_values(0).unique()    
-                    for name in name_list:
-                        file = filename + '-' + str(year)[0:4] + "-" + name[name.find("(")+1:name.find(")")] + '.xlsx'
-                        df_r = self.result_dataframe.xs(year, axis = 0, level = 1, drop_level = False).xs(name, axis = 0, level = 0, drop_level = False)
-                        if len(df_r.index) > 0: # only write is they already sent in reports
-                            to_excel(structs  = self.metapatterns, 
-                                     df_patterns = self.pattern_dataframe, 
-                                     df_patterns_short = self.pattern_dataframe_short,
-                                     df_results  = df_r, 
-                                     path     = path, 
-                                     filename = file)
-
-        else:
-            to_excel(structs = self.metapatterns, 
-                     df_patterns = self.pattern_dataframe, 
-                     df_patterns_short = self.pattern_dataframe_short,
-                     df_results  = self.result_dataframe, 
-                     path     = path, 
-                     filename = filename + ".xlsx")          
         return None
