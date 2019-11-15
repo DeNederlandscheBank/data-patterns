@@ -10,4 +10,3 @@ from .data_patterns import *
 from .encodings import *
 from .constants import *
 from .transform import *
-
