@@ -141,15 +141,15 @@ def derive_patterns(dataframe   = None,
                     metapatterns = None):
     '''
     '''
-    df_results = None
+    df_results = PatternDataFrame(columns = PATTERNS_COLUMNS)
     for metapattern in metapatterns:
         pattern = metapattern.get("pattern", "-->")
         if pattern == "-->":
-            df_results = derive_association_patterns(metapattern = metapattern,
-                                                     dataframe = dataframe)
+            df_results = df_results.append(derive_association_patterns(metapattern = metapattern,
+                                                                       dataframe = dataframe), ignore_index = True)
         else:
-            df_results = derive_quantitative_patterns(metapattern = metapattern,
-                                                      dataframe = dataframe)
+            df_results = df_results.append(derive_quantitative_patterns(metapattern = metapattern,
+                                                                        dataframe = dataframe), ignore_index = True)
     return df_results
 
 def derive_association_patterns(metapattern = None,
@@ -160,8 +160,18 @@ def derive_association_patterns(metapattern = None,
 
     parameters = metapattern.get("parameters", None)
 
-    p_part = metapattern.get("P_columns", None)
-    q_part = metapattern.get("Q_columns", None)
+    include_subsets = metapattern.get("include_subsets", False)
+
+    if include_subsets:
+        p_part = None
+        q_part = None
+        col_total_p = metapattern.get("P_columns", None)
+        col_total_q = metapattern.get("Q_columns", None)
+    else:
+        p_part = metapattern.get("P_columns", None)
+        q_part = metapattern.get("Q_columns", None)
+        col_total_p = dataframe.columns
+        col_total_q = dataframe.columns
 
     metapattern = copy.deepcopy(metapattern)
 
@@ -171,24 +181,24 @@ def derive_association_patterns(metapattern = None,
     # - q is given but p is not, 
     # - p and q are not given
     if ((p_part is None) and (q_part is not None)):
-        p_set = [col for col in dataframe.columns if col not in metapattern["Q_columns"]]
+        p_set = [col for col in col_total_p if col not in metapattern["Q_columns"]]
         p_set = list(itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set))))
         for item in p_set:
             metapattern["P_columns"] = list(item)
             new_patterns = derive_patterns_from_metapattern(metapattern = metapattern, dataframe = dataframe)
             new_list.extend(new_patterns)
     elif ((q_part is None) and (p_part is not None)):
-        q_set = [col for col in dataframe.columns if col not in metapattern["P_columns"]]
+        q_set = [col for col in col_total_q if col not in metapattern["P_columns"]]
         q_set = list(itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set))))
         for item in q_set:
             metapattern[Q_PART] = list(item)
             new_patterns = derive_patterns_from_metapattern(metapattern = metapattern, dataframe = dataframe)
             new_list.extend(new_patterns)
     elif ((q_part is None) and (p_part is None)):
-        p_set = [col for col in dataframe.columns]
+        p_set = [col for col in col_total_p]
         p_set = list(itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set))))            
         for p_item in p_set:
-            q_set = [col for col in dataframe.columns if col not in p_item]
+            q_set = [col for col in col_total_q if col not in p_item]
             q_set = list(itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set))))
             for q_item in q_set:
                 metapattern["Q_columns"] = list(q_item)
@@ -281,38 +291,50 @@ def derive_results(dataframe = None,
                 pandas_co = df_patterns.loc[idx, "pandas co"].replace("data_patterns.", "")
                 results_ex = eval(pandas_ex, ENCODINGS_DICT, {'df': df}).index.values.tolist()
                 results_co = eval(pandas_co, ENCODINGS_DICT, {'df': df}).index.values.tolist()
+
+
                 for i in results_ex:
+                    values_p = df.loc[i, df_patterns.loc[idx, "P columns"]].values.tolist()
+                    if type(df_patterns.loc[idx, "Q columns"])==list:
+                        values_q = df.loc[i, df_patterns.loc[idx, "Q columns"]].values.tolist()
+                    else:
+                        values_q = df_patterns.loc[idx, "Q columns"]
                     results.append([False, 
-                                                    df_patterns.loc[idx, "pattern_id"], 
-                                                    df_patterns.loc[idx, "cluster"], 
-                                                    i, 
-                                                    df_patterns.loc[idx, "support"], 
-                                                    df_patterns.loc[idx, "exceptions"], 
-                                                    df_patterns.loc[idx, "confidence"], 
-                                                    df_patterns.loc[idx, "P columns"], 
-                                                    df_patterns.loc[idx, "relation type"], 
-                                                    df_patterns.loc[idx, "Q columns"], 
-                                                    df_patterns.loc[idx, "P"], 
-                                                    df_patterns.loc[idx, "relation"], 
-                                                    df_patterns.loc[idx, "Q"], 
-                                                    df.loc[i, df_patterns.loc[idx, "P columns"]].values.tolist(), 
-                                                    df.loc[i, df_patterns.loc[idx, "Q columns"]].values.tolist()])
+                                    df_patterns.loc[idx, "pattern_id"], 
+                                    df_patterns.loc[idx, "cluster"], 
+                                    i, 
+                                    df_patterns.loc[idx, "support"], 
+                                    df_patterns.loc[idx, "exceptions"], 
+                                    df_patterns.loc[idx, "confidence"], 
+                                    df_patterns.loc[idx, "P columns"], 
+                                    df_patterns.loc[idx, "relation type"], 
+                                    df_patterns.loc[idx, "Q columns"], 
+                                    df_patterns.loc[idx, "P"], 
+                                    df_patterns.loc[idx, "relation"], 
+                                    df_patterns.loc[idx, "Q"], 
+                                    values_p, 
+                                    values_q])
                 for i in results_co:
+                    values_p = df.loc[i, df_patterns.loc[idx, "P columns"]].values.tolist()
+                    if type(df_patterns.loc[idx, "Q columns"])==list:
+                        values_q = df.loc[i, df_patterns.loc[idx, "Q columns"]].values.tolist()
+                    else:
+                        values_q = df_patterns.loc[idx, "Q columns"]
                     results.append([True, 
-                                                    df_patterns.loc[idx, "pattern_id"], 
-                                                    df_patterns.loc[idx, "cluster"], 
-                                                    i, 
-                                                    df_patterns.loc[idx, "support"], 
-                                                    df_patterns.loc[idx, "exceptions"], 
-                                                    df_patterns.loc[idx, "confidence"], 
-                                                    df_patterns.loc[idx, "P columns"], 
-                                                    df_patterns.loc[idx, "relation type"], 
-                                                    df_patterns.loc[idx, "Q columns"], 
-                                                    df_patterns.loc[idx, "P"], 
-                                                    df_patterns.loc[idx, "relation"], 
-                                                    df_patterns.loc[idx, "Q"], 
-                                                    df.loc[i, df_patterns.loc[idx, "P columns"]].values.tolist(), 
-                                                    df.loc[i, df_patterns.loc[idx, "Q columns"]].values.tolist()])
+                                    df_patterns.loc[idx, "pattern_id"], 
+                                    df_patterns.loc[idx, "cluster"], 
+                                    i, 
+                                    df_patterns.loc[idx, "support"], 
+                                    df_patterns.loc[idx, "exceptions"], 
+                                    df_patterns.loc[idx, "confidence"], 
+                                    df_patterns.loc[idx, "P columns"], 
+                                    df_patterns.loc[idx, "relation type"], 
+                                    df_patterns.loc[idx, "Q columns"], 
+                                    df_patterns.loc[idx, "P"], 
+                                    df_patterns.loc[idx, "relation"], 
+                                    df_patterns.loc[idx, "Q"], 
+                                    values_p, 
+                                    values_q])
         df_results = pd.DataFrame(data = results, columns = RESULTS_COLUMNS)
         df_results.sort_values(by = ["index", "confidence", "support"], ascending = [True, False, False], inplace = True)
         df_results.set_index(["index"], inplace = True)
@@ -476,7 +498,7 @@ def patterns_column_value(dataframe = None,
         # confirmations and exceptions of the pattern, a list of booleans
         co = reduce(operators[pattern], [data_array[c, :], 0])
         pattern_data = derive_pattern_data(dataframe,
-                                           dataframe.columns[c],
+                                           [dataframe.columns[c]],
                                            value,
                                            pattern,
                                            pattern_name,
@@ -579,7 +601,7 @@ def derive_quantitative_patterns(metapattern  = None,
     columns = metapattern.get("columns", None)
     P_columns = metapattern.get("P_columns", None)
     Q_columns = metapattern.get("Q_columns", None)
-    value = metapattern.get("values", None)
+    value = metapattern.get("value", None)
     parameters = metapattern.get("parameters", None)
 
     # if P_dataframe and Q_dataframe are given then join the dataframes and select columns
@@ -659,7 +681,10 @@ def read_excel(filename = None,
 
 def evaluate_excel_string(s):
     if s != '':
-        return ast.literal_eval(s)
+        if type(s)==str:
+            return ast.literal_eval(s)
+        else:
+            return s
     else:
         return s
 
@@ -674,7 +699,11 @@ def to_xbrl_expression(pattern, encode, result_type, parameters):
     value_Q = pattern[5]
 
     if pattern[1] != '-->':
-        formula_string = '"' + str(column_P[0]) + '"' + str(pattern[1]) + ' "' + str(column_Q[0]) + '"'
+
+        if type(column_Q)==list:
+            formula_string = '"' + str(column_P[0]) + '"' + str(pattern[1]) + ' "' + str(column_Q[0]) + '"'
+        else:
+            formula_string = '"' + str(column_P[0]) + '"' + str(pattern[1]) + ' "' + str(column_Q) + '"'
     else:
         # if condition
         condition = '' 
@@ -718,7 +747,10 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
             pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
             for p_item in column_P[1:]:
                 pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
-            pandas_string = pandas_string + ') - df["' + str(column_Q[0]) + '"] '
+            if type(column_Q)==list:
+                pandas_string = pandas_string + ') - df["' + str(column_Q[0]) + '"] '
+            else:
+                pandas_string = pandas_string + ') - ' + str(column_Q) + ' '
 
             if result_type == True:
                 pandas_string = pandas_string + '< 1.5e'+str(-parameters.get("decimal", 8))+']'
@@ -729,19 +761,34 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
             pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
             for p_item in column_P[1:]:
                 pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
-            pandas_string = pandas_string + ') - df["' + str(column_Q[0]) + '"] '
+            if type(column_Q)==list:
+                pandas_string = pandas_string + ') - df["' + str(column_Q[0]) + '"] '
+            else:
+                pandas_string = pandas_string + ') - ' + str(column_Q) + ' '
             if result_type == True:
                 pandas_string = pandas_string + '< 1.5e'+str(-parameters.get("decimal", 0))+']'
             else:
                 pandas_string = pandas_string + '>= 1.5e'+str(-parameters.get("decimal", 0))+']'
 
         else:
-            string_pattern = str(pattern[1])
+            if result_type == True:
+                string_pattern = str(pattern[1])
+            else:
+                if pattern[1] == "<":
+                    string_pattern = ">="
+                elif pattern[1] == "<=":
+                    string_pattern = ">"
+                elif pattern[1] == ">=":
+                    string_pattern = "<"
+                elif pattern[1] == ">":
+                    string_pattern = "<="
             pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
             for p_item in column_P[1:]:
                 pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
-            pandas_string = pandas_string + ")" + string_pattern + 'df["' + str(column_Q[0]) + '"]]'
-
+            if type(column_Q)==list:
+                pandas_string = pandas_string + ")" + string_pattern + 'df["' + str(column_Q[0]) + '"]]'
+            else:
+                pandas_string = pandas_string + ")" + string_pattern + ' ' + str(column_Q) + ']'
     else:
         # if condition
         condition_P = ""
