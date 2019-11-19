@@ -141,16 +141,20 @@ def derive_patterns(dataframe   = None,
                     metapatterns = None):
     '''
     '''
-    df_results = PatternDataFrame(columns = PATTERNS_COLUMNS)
+    df_patterns = PatternDataFrame(columns = PATTERNS_COLUMNS)
     for metapattern in metapatterns:
         pattern = metapattern.get("pattern", "-->")
         if pattern == "-->":
-            df_results = df_results.append(derive_association_patterns(metapattern = metapattern,
+            df_patterns = df_patterns.append(derive_association_patterns(metapattern = metapattern,
                                                                        dataframe = dataframe), ignore_index = True)
         else:
-            df_results = df_results.append(derive_quantitative_patterns(metapattern = metapattern,
+            df_patterns = df_patterns.append(derive_quantitative_patterns(metapattern = metapattern,
                                                                         dataframe = dataframe), ignore_index = True)
-    return df_results
+    df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
+    df_patterns[SUPPORT] = df_patterns[SUPPORT].astype(np.int64)
+    df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
+    df_patterns.index.name = 'index'
+    return df_patterns
 
 def derive_association_patterns(metapattern = None,
                                 dataframe = None):
@@ -209,9 +213,9 @@ def derive_association_patterns(metapattern = None,
         new_patterns = derive_patterns_from_metapattern(metapattern = metapattern, dataframe = dataframe)
         new_list.extend(new_patterns)
 
-    df_results = to_dataframe(patterns = new_list, parameters = parameters)
+    df_patterns = to_dataframe(patterns = new_list, parameters = parameters)
 
-    return df_results
+    return df_patterns
 
 def to_dataframe(patterns = None, parameters = {}):
     '''
