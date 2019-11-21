@@ -162,15 +162,27 @@ def derive_association_patterns(metapattern = None,
     '''
     new_list = list()
 
-    parameters = metapattern.get("parameters", None)
+    parameters = metapattern.get("parameters", {})
 
-    include_subsets = metapattern.get("include_subsets", False)
+    include_subsets = parameters.get("include_subsets", False)
+    include_subsets_p = parameters.get("include_subsets_P_columns", False)
+    include_subsets_q = parameters.get("include_subsets_Q_columns", False)
 
     if include_subsets:
         p_part = None
         q_part = None
         col_total_p = metapattern.get("P_columns", None)
         col_total_q = metapattern.get("Q_columns", None)
+    elif include_subsets_q:
+        q_part = None
+        col_total_q = metapattern.get("Q_columns", None)
+        p_part = metapattern.get("P_columns", None)
+        col_total_p = dataframe.columns
+    elif include_subsets_p:
+        p_part = None
+        col_total_p = metapattern.get("P_columns", None)
+        q_part = metapattern.get("Q_columns", None)
+        col_total_q = dataframe.columns
     else:
         p_part = metapattern.get("P_columns", None)
         q_part = metapattern.get("Q_columns", None)
@@ -186,24 +198,24 @@ def derive_association_patterns(metapattern = None,
     # - p and q are not given
     if ((p_part is None) and (q_part is not None)):
         p_set = [col for col in col_total_p if col not in metapattern["Q_columns"]]
-        p_set = list(itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set))))
+        p_set = itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set)))
         for item in p_set:
             metapattern["P_columns"] = list(item)
             new_patterns = derive_patterns_from_metapattern(metapattern = metapattern, dataframe = dataframe)
             new_list.extend(new_patterns)
     elif ((q_part is None) and (p_part is not None)):
         q_set = [col for col in col_total_q if col not in metapattern["P_columns"]]
-        q_set = list(itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set))))
+        q_set = itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set)))
         for item in q_set:
-            metapattern[Q_PART] = list(item)
+            metapattern["Q_columns"] = list(item)
             new_patterns = derive_patterns_from_metapattern(metapattern = metapattern, dataframe = dataframe)
             new_list.extend(new_patterns)
     elif ((q_part is None) and (p_part is None)):
         p_set = [col for col in col_total_p]
-        p_set = list(itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set))))            
+        p_set = itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set)))
         for p_item in p_set:
             q_set = [col for col in col_total_q if col not in p_item]
-            q_set = list(itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set))))
+            q_set = itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set)))
             for q_item in q_set:
                 metapattern["Q_columns"] = list(q_item)
                 metapattern["P_columns"] = list(p_item)
@@ -282,20 +294,14 @@ def derive_results(dataframe = None,
             print("Join of P_dataframe and Q_dataframe failed, overlapping columns?")
             return []
     if (dataframe is not None) and (df_patterns is not None):
-
         df = dataframe.copy()
-
-        results = []
-
+        results = list()
         for idx in df_patterns.index:
-
             if df_patterns.loc[idx, RELATION_TYPE] != "almost =":
-
                 pandas_ex = df_patterns.loc[idx, "pandas ex"].replace("data_patterns.", "")
                 pandas_co = df_patterns.loc[idx, "pandas co"].replace("data_patterns.", "")
                 results_ex = eval(pandas_ex, ENCODINGS_DICT, {'df': df}).index.values.tolist()
                 results_co = eval(pandas_co, ENCODINGS_DICT, {'df': df}).index.values.tolist()
-
 
                 for i in results_ex:
                     values_p = df.loc[i, df_patterns.loc[idx, "P columns"]].values.tolist()
@@ -368,6 +374,13 @@ def derive_patterns_from_metapattern(dataframe = None,
         for c in df_features.columns:
             if c in metapattern[ENCODE].keys():
                 df_features[c] = metapattern[ENCODE][c](df_features[c])
+    # derive encode-string
+    encode_str = '{}'
+    if ENCODE in metapattern.keys():
+        encode_str = str(metapattern[ENCODE])
+        for string in re.findall("\<(.*?)\>", encode_str):
+            encode_str = encode_str.replace("<"+string+">", "'"+ re.findall("\s(.*?)\s", string)[0] + "'")
+
     df_patterns = df_features.reset_index(drop = True).drop_duplicates() # these are all unique combinations, i.e. the potential rules
     patterns = list()
     for row in df_patterns.index:
@@ -380,23 +393,18 @@ def derive_patterns_from_metapattern(dataframe = None,
             for column in Q:
                 df_co = df_co[df_co[column] == df_patterns.loc[row, column]]
             n_co = len(df_co.index)
-            exceptions = [i for i in df_selection.index if not i in df_co.index]
-            if len(exceptions) > 0:
-                df_ex = df_selection.loc[exceptions]
-                n_ex = len(df_ex.index)
-            else:
-                df_ex = pd.DataFrame()
-                n_ex = 0
+#            exceptions = [i for i in df_selection.index if not i in df_co.index]
+#            if len(exceptions) > 0:
+#                df_ex = df_selection.loc[exceptions]
+#                n_ex = len(df_ex.index)
+#            else:
+#                df_ex = pd.DataFrame()
+#                n_ex = 0
             conf = n_co / total
             if ((conf >= confidence) and (n_co >= support)):
-                encode_str = '{}'
-                if ENCODE in metapattern.keys():
-                    encode_str = str(metapattern[ENCODE])
-                    for string in re.findall("\<(.*?)\>", encode_str):
-                        encode_str = encode_str.replace("<"+string+">", "'"+ re.findall("\s(.*?)\s", string)[0] + "'")
                 patterns.append([[metapattern.get('name', "No name"), 0], 
                                [list(P), "-->", list(Q), list(df_patterns.loc[row, P].values), "-->", list(df_patterns.loc[row, Q].values)],
-                                [n_co, n_ex, conf], ast.literal_eval(encode_str)])
+                                [n_co, total - n_co, conf], ast.literal_eval(encode_str)])
     return patterns
 
 def convert_columns(patterns = [], 
@@ -832,3 +840,36 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
 
     return pandas_string
 
+def find_redundant_patterns(df_patterns = None):
+    '''This function checks whether there are redundant patterns and changes pattern status accordingly
+    so if [A, B, C] -> [Z] has conf = 0.95 and support = 10 and 
+          [A, B] -> [Z] has equal or better statistics then the former pattern is redundant
+    ''' 
+    for row in df_patterns.index:
+        p_columns = df_patterns.loc[row, 'P columns']
+        q_columns = df_patterns.loc[row, 'Q columns']
+        p_items = df_patterns.loc[row, 'P']
+        if len(p_columns) > 2: # only
+            # determine all possible subsets of P and check whether they are better
+            p_subsets = list(itertools.combinations(p_columns, len(p_columns) - 1))
+            for subset in p_subsets:
+                P_dict = {col: p_items[idx] for idx, col in enumerate(subset)}
+                for i, row2 in enumerate(df_patterns.index):
+                    p_columns2 = df_patterns.loc[row2, 'P columns']
+                    q_columns2 = df_patterns.loc[row2, 'Q columns']
+                    p_item2 = df_patterns.loc[row2, 'P']
+                    if (set(q_columns2) == set(q_columns)) and (len(p_columns2) == len(P_dict.keys())):
+                        equal = True
+                        for key in P_dict.keys():
+                            if key not in p_columns2:
+                                equal = False
+                            else:
+                                if P_dict[key] not in p_item2:
+                                    equal = False
+                                else:
+                                    if P_dict[key] != p_item2[p_item2.index(P_dict[key])]:
+                                        equal = False
+                        if equal:
+                            if (df_patterns.loc[row, 'confidence'] <= df_patterns.loc[row2, 'confidence']) and (df_patterns.loc[row, 'support'] <= df_patterns.loc[row2, 'support']):
+                                df_patterns.loc[row, 'pattern status'] = "redundant with pattern " + str(row2)
+    return df_patterns
