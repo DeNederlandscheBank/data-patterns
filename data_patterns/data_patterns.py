@@ -141,17 +141,17 @@ class PatternMiner:
 def derive_patterns(dataframe   = None, 
                     metapatterns = None):
     '''Derive patterns from metapatterns
-       In two flavour: association rules and quantitative rules
+       In two flavours: association rules and quantitative rules
     '''
     df_patterns = PatternDataFrame(columns = PATTERNS_COLUMNS)
     for metapattern in metapatterns:
-        pattern = metapattern.get("pattern", "-->")
-        if pattern == "-->":
-            df_patterns = df_patterns.append(derive_association_patterns(metapattern = metapattern,
-                                                                         dataframe = dataframe), ignore_index = True)
+        if metapattern.get("pattern", "-->") == "-->":
+            patterns = derive_association_patterns(metapattern = metapattern,
+                                                   dataframe = dataframe)
         else:
-            df_patterns = df_patterns.append(derive_quantitative_patterns(metapattern = metapattern,
-                                                                          dataframe = dataframe), ignore_index = True)
+            patterns = derive_quantitative_patterns(metapattern = metapattern,
+                                                    dataframe = dataframe)
+        df_patterns = df_patterns.append(patterns, ignore_index = True)
     df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
     df_patterns[SUPPORT] = df_patterns[SUPPORT].astype(np.int64)
     df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
@@ -242,11 +242,11 @@ def to_dataframe(patterns = None, parameters = {}):
                 pattern + 
                 pattern_stats + 
                 [INITIAL_PATTERN_STATUS] + 
-                [encode] + 
-                [to_pandas_expression(pattern, encode, True, parameters)] +
-                [to_pandas_expression(pattern, encode, False, parameters)] +
-                [to_xbrl_expression(pattern,encode, True, parameters)] + 
-                [to_xbrl_expression(pattern,encode, False, parameters)] for [pattern_id, pattern, pattern_stats, encode] in patterns]
+                [{}] + 
+                [pandas_co] +
+                [pandas_ex] +
+                [""] + 
+                [""] for [pattern_id, pattern, pattern_stats, pandas_co, pandas_ex] in patterns]
 
         df = PatternDataFrame(data = data, columns = PATTERNS_COLUMNS)
         df.index.name = 'index'
@@ -259,6 +259,11 @@ def update_statistics(dataframe = None,
                       df_patterns = None):
     '''Update statistics in df_patterns with statistics from the data
     '''
+    for item in encodings_definitions:
+        exec(encodings_definitions[item])
+    encodings = {}
+    for item in encodings_definitions.keys():
+        encodings[item]= locals()[item]
     df_new_patterns = pd.DataFrame()
     if (dataframe is not None) and (df_patterns is not None):
         # adding the levels of the index to the columns (so they can be used for finding rules)
@@ -267,8 +272,8 @@ def update_statistics(dataframe = None,
         for idx in df_patterns.index:
             pandas_co = df_patterns.loc[idx, PANDAS_CO].replace("data_patterns.", "")
             pandas_ex = df_patterns.loc[idx, PANDAS_EX].replace("data_patterns.", "")
-            n_co = len(eval(pandas_co, ENCODINGS_DICT, {'df': dataframe}).index.values.tolist())
-            n_ex = len(eval(pandas_ex, ENCODINGS_DICT, {'df': dataframe}).index.values.tolist())
+            n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
+            n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
             total = n_co + n_ex
             if total > 0:
                 conf = n_co / total
@@ -296,6 +301,13 @@ def derive_results(dataframe = None,
         except:
             print("Join of P_dataframe and Q_dataframe failed, overlapping columns?")
             return []
+
+    for item in encodings_definitions:
+        exec(encodings_definitions[item])
+    encodings = {}
+    for item in encodings_definitions.keys():
+        encodings[item]= locals()[item]
+
     if (dataframe is not None) and (df_patterns is not None):
         df = dataframe.copy()
         results = list()
@@ -303,9 +315,8 @@ def derive_results(dataframe = None,
             if df_patterns.loc[idx, RELATION_TYPE] != "almost =":
                 pandas_ex = df_patterns.loc[idx, "pandas ex"].replace("data_patterns.", "")
                 pandas_co = df_patterns.loc[idx, "pandas co"].replace("data_patterns.", "")
-                results_ex = eval(pandas_ex, ENCODINGS_DICT, {'df': df}).index.values.tolist()
-                results_co = eval(pandas_co, ENCODINGS_DICT, {'df': df}).index.values.tolist()
-
+                results_ex = eval(pandas_ex, encodings, {'df': df}).index.values.tolist()
+                results_co = eval(pandas_co, encodings, {'df': df}).index.values.tolist()
                 for i in results_ex:
                     values_p = df.loc[i, df_patterns.loc[idx, "P columns"]].values.tolist()
                     if type(df_patterns.loc[idx, "Q columns"])==list:
@@ -359,47 +370,46 @@ def derive_results(dataframe = None,
 
 def derive_patterns_from_metapattern(dataframe = None, 
                                      metapattern = None):
-    ''' 
+    '''Here we derive the patterns from the metapattern definitions
     '''
-    confidence, support = get_parameters(metapattern.get("parameters", {}))
-    # the metapattern contains the structure of the pattern as a dictionary
-    P = sorted(metapattern["P_columns"])
-    Q = sorted(metapattern["Q_columns"])
-    df_features = dataframe.copy()
+    # get items from metapattern definition
+    parameters = metapattern.get("parameters", {})
+    encode = metapattern.get(ENCODE, {})
+    P_columns = sorted(metapattern["P_columns"])
+    Q_columns = sorted(metapattern["Q_columns"])
+    confidence, support = get_parameters(parameters)
     # adding index levels to columns (in case the pattern contains index elements)
-    for level in range(len(df_features.index.names)):
-        df_features[df_features.index.names[level]] = df_features.index.get_level_values(level = level)
-    # derive feature list from P and Q
-    df_features = df_features[P + Q]
-    # apply encoding of features
+    for level in range(len(dataframe.index.names)):
+        dataframe[dataframe.index.names[level]] = dataframe.index.get_level_values(level = level)
+    # derive df_feature list from P and Q (we use a copy, so we can change values for encodings)
+    df_features = dataframe[P_columns + Q_columns].copy()
+    # execute dynamic encoding functions
+    for item in encodings_definitions:
+        exec(encodings_definitions[item])
+    encodings = {}
+    for item in encodings_definitions.keys():
+        encodings[item]= locals()[item]
+    # perform encoding of df_feature
     if ENCODE in metapattern.keys():
         for c in df_features.columns:
             if c in metapattern[ENCODE].keys():
-                df_features[c] = metapattern[ENCODE][c](df_features[c])
-    # derive encode-string
-    encode_str = '{}'
-    if ENCODE in metapattern.keys():
-        encode_str = str(metapattern[ENCODE])
-        for string in re.findall("\<(.*?)\>", encode_str):
-            encode_str = encode_str.replace("<"+string+">", "'"+ re.findall("\s(.*?)\s", string)[0] + "'")
-
-    df_patterns = df_features.reset_index(drop = True).drop_duplicates() # these are all unique combinations, i.e. the potential rules
+                df_features[c] = eval(str(metapattern[ENCODE][c])+ "(s)", encodings, {'s': df_features[c]})
+    df_potential_patterns = df_features.drop_duplicates() # these are all unique combinations, i.e. the potential rules
     patterns = list()
-    for row in df_patterns.index:
-        df_selection = df_features
-        for column in P:
-            df_selection = df_selection[df_selection[column] == df_patterns.loc[row, column]]
-        total = len(df_selection)
-        if total > 0:
-            df_co = df_selection
-            for column in Q:
-                df_co = df_co[df_co[column] == df_patterns.loc[row, column]]
-            n_co = len(df_co.index)
-            conf = n_co / total
-            if ((conf >= confidence) and (n_co >= support)):
-                patterns.append([[metapattern.get('name', "No name"), 0], 
-                                 [list(P), "-->", list(Q), list(df_patterns.loc[row, P].values), "-->", list(df_patterns.loc[row, Q].values)],
-                                 [n_co, total - n_co, conf], ast.literal_eval(encode_str)])
+    for potential_pattern in df_potential_patterns.index:
+        P_values = list(df_potential_patterns.loc[potential_pattern, P_columns].values)
+        Q_values = list(df_potential_patterns.loc[potential_pattern, Q_columns].values)
+        pattern = [P_columns, "-->", Q_columns, P_values, "-->", Q_values]
+        pandas_co = to_pandas_expression(pattern, encode, True, parameters)
+        pandas_ex = to_pandas_expression(pattern, encode, False, parameters)
+        n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
+        n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
+        conf = n_co / (n_co + n_ex)
+        if ((conf >= confidence) and (n_co >= support)):
+            patterns.append([[metapattern.get('name', "No name"), 0], pattern, [n_co, n_ex, conf], pandas_co, pandas_ex])
+    # deleting the levels of the index to the columns
+    for level in range(len(dataframe.index.names)):
+        del dataframe[dataframe.index.names[level]]
     return patterns
 
 def convert_columns(patterns = [], 
@@ -483,7 +493,7 @@ def derive_pattern_data(df,
     co_sum, ex_sum, conf = derive_pattern_statistics(co)
     # we only store the patterns with confidence higher than conf
     if conf >= confidence:
-        data = [[name, 0], [P_columns, pattern, Q_columns, '', '', ''], [co_sum, ex_sum, conf], {}]
+        data = [[name, 0], [P_columns, pattern, Q_columns, '', '', ''], [co_sum, ex_sum, conf], "", ""]
     return data
 
 def get_parameters(parameters):
@@ -591,11 +601,12 @@ def patterns_sums_column(dataframe  = None,
                     co_sum, ex_sum, conf = derive_pattern_statistics(co)
                     # we only store the patterns that satisfy criteria
                     if (conf >= confidence) and (co_sum >= support):
+                        pattern = [[dataframe.columns[c] for c in lhs_columns],
+                                   "sum", 
+                                   [dataframe.columns[rhs_column]], '', '', '']
                         pattern_data = [[pattern_name, 0], 
-                                        [[dataframe.columns[c] for c in lhs_columns], 
-                                         "sum", 
-                                         [dataframe.columns[rhs_column]], '', '', ''], 
-                                        [co_sum, ex_sum, conf], {}]
+                                        pattern, 
+                                        [co_sum, ex_sum, conf], "", ""]
                         if pattern_data:
                             yield pattern_data
 
@@ -714,7 +725,11 @@ def derive_quantitative_patterns(metapattern  = None,
                                          P_columns = P_columns,
                                          Q_columns = Q_columns,
                                          parameters = parameters)
-    df = to_dataframe(patterns = results, parameters = parameters)
+
+    patterns = [[pattern_id] + [pattern] + [pattern_stats] +
+                [to_pandas_expression(pattern, {}, True, parameters), 
+                 to_pandas_expression(pattern, {}, False, parameters)] for [pattern_id, pattern, pattern_stats, pandas_co, pandas_ex] in results]
+    df = to_dataframe(patterns = patterns, parameters = parameters)
 
     logger.info('END: %s (%s)', pattern, pattern_name)
 
@@ -733,10 +748,12 @@ def read_excel(filename = None,
         P = evaluate_excel_string(df.loc[row, P_PART])
         Q = evaluate_excel_string(df.loc[row, Q_PART])
         encode = ast.literal_eval(df.loc[row, ENCODINGS])
+        pandas_co = df.loc[row, PANDAS_CO]
+        pandas_ex = df.loc[row, PANDAS_EX]
         patterns.append([[df.loc[row, PATTERN_ID], 0], 
                          [P_columns, df.loc[row, RELATION_TYPE], Q_columns, 
                          P, df.loc[row, RELATION], Q],
-                         [0, 0, 0], encode])
+                         [0, 0, 0], pandas_co, pandas_ex])
     df_patterns = to_dataframe(patterns = patterns, parameters = {})
     if dataframe is not None:
         df_patterns = update_statistics(dataframe = dataframe, df_patterns = df_patterns)
@@ -752,45 +769,46 @@ def evaluate_excel_string(s):
         return s
 
 def to_xbrl_expression(pattern, encode, result_type, parameters):
+    '''Placeholder for XBRL expression
     '''
-    '''
+    formula_string = ""
     # the column name
-    column_P = pattern[0]
-    column_Q = pattern[2]
-    # the content of the column
-    value_P = pattern[3]
-    value_Q = pattern[5]
+    # column_P = pattern[0]
+    # column_Q = pattern[2]
+    # # the content of the column
+    # value_P = pattern[3]
+    # value_Q = pattern[5]
 
-    if pattern[1] != '-->':
+    # if pattern[1] != '-->':
 
-        if type(column_Q)==list:
-            formula_string = '"' + str(column_P[0]) + '"' + str(pattern[1]) + ' "' + str(column_Q[0]) + '"'
-        else:
-            formula_string = '"' + str(column_P[0]) + '"' + str(pattern[1]) + ' "' + str(column_Q) + '"'
-    else:
-        # if condition
-        condition = '' 
-        for idx, cond in enumerate(column_P):
-            if type(value_P[idx]) == str:
-                r_string = '"' + str(value_P[idx]) + '"'
-            else:
-                r_string = str(value_P[idx])
-            condition = condition + '({' + str(column_P[idx]) + '} = ' + r_string + ')'
-            if cond != column_P[-1]:
-                condition = condition + ' and '
+    #     if type(column_Q)==list:
+    #         formula_string = '"' + str(column_P[0]) + '"' + str(pattern[1]) + ' "' + str(column_Q[0]) + '"'
+    #     else:
+    #         formula_string = '"' + str(column_P[0]) + '"' + str(pattern[1]) + ' "' + str(column_Q) + '"'
+    # else:
+    #     # if condition
+    #     condition = '' 
+    #     for idx, cond in enumerate(column_P):
+    #         if type(value_P[idx]) == str:
+    #             r_string = '"' + str(value_P[idx]) + '"'
+    #         else:
+    #             r_string = str(value_P[idx])
+    #         condition = condition + '({' + str(column_P[idx]) + '} = ' + r_string + ')'
+    #         if cond != column_P[-1]:
+    #             condition = condition + ' and '
 
-        # expression is if condition holds
-        expression = ''
-        for idx, cond in enumerate(column_Q):
-            if type(value_Q[idx]) == str:
-                r_string = '"' + str(value_Q[idx]) + '"'
-            else:
-                r_string = str(value_Q[idx])
-            expression = expression + '("' + str(column_Q[idx]) + '" = ' + r_string + ')'
-            if cond != column_Q[-1]:
-                expression = expression + ' and '
+    #     # expression is if condition holds
+    #     expression = ''
+    #     for idx, cond in enumerate(column_Q):
+    #         if type(value_Q[idx]) == str:
+    #             r_string = '"' + str(value_Q[idx]) + '"'
+    #         else:
+    #             r_string = str(value_Q[idx])
+    #         expression = expression + '("' + str(column_Q[idx]) + '" = ' + r_string + ')'
+    #         if cond != column_Q[-1]:
+    #             expression = expression + ' and '
 
-        formula_string = "IF " + "(" + condition + ") THEN " + expression
+    #     formula_string = "IF " + "(" + condition + ") THEN " + expression
 
     return formula_string
 
@@ -805,34 +823,41 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
     value_Q = pattern[5]
 
     if pattern[1] != '-->':
-
         if pattern[1]=="=":
-            pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
+            pandas_string = 'df[(abs((df["' + str(column_P[0]) + '"]'
             for p_item in column_P[1:]:
                 pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
             if type(column_Q)==list:
-                pandas_string = pandas_string + ') - df["' + str(column_Q[0]) + '"] '
+                pandas_string = pandas_string + ')-df["' + str(column_Q[0]) + '"]) '
             else:
-                pandas_string = pandas_string + ') - ' + str(column_Q) + ' '
+                pandas_string = pandas_string + ')-' + str(column_Q) + ' '
 
             if result_type == True:
-                pandas_string = pandas_string + '< 1.5e'+str(-parameters.get("decimal", 8))+']'
+                pandas_string = pandas_string + '< 1.5e'+str(-parameters.get("decimal", 8))+')]'
             else:
-                pandas_string = pandas_string + '>= 1.5e'+str(-parameters.get("decimal", 8))+']'
-
+                pandas_string = pandas_string + '>= 1.5e'+str(-parameters.get("decimal", 8))+')]'
         elif pattern[1]=="sum":
-            pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
-            for p_item in column_P[1:]:
-                pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
-            if type(column_Q)==list:
-                pandas_string = pandas_string + ') - df["' + str(column_Q[0]) + '"] '
-            else:
-                pandas_string = pandas_string + ') - ' + str(column_Q) + ' '
-            if result_type == True:
-                pandas_string = pandas_string + '< 1.5e'+str(-parameters.get("decimal", 0))+']'
-            else:
-                pandas_string = pandas_string + '>= 1.5e'+str(-parameters.get("decimal", 0))+']'
 
+            nonzero = '(df["' + str(column_P[0]) + '"]!=0)'
+            for p_item in column_P[1:]:
+                nonzero = nonzero + ' & (df["' + str(p_item) + '"]!=0)'
+            if type(column_Q)==list:
+                for q_item in column_Q:
+                    nonzero = nonzero + ' & (df["' + str(q_item) + '"]!=0)'
+            else:
+                nonzero = nonzero + ' & (df[' + str(column_Q) + ']!=0)'
+
+            pandas_string = 'df[(' + nonzero + ') & (abs((df["' + str(column_P[0]) + '"]'
+            for p_item in column_P[1:]:
+                pandas_string = pandas_string + '+df["' + str(p_item) + '"]'
+            if type(column_Q)==list:
+                pandas_string = pandas_string + ')-df["' + str(column_Q[0]) + '"]) '
+            else:
+                pandas_string = pandas_string + ')-' + str(column_Q) + ' '
+            if result_type == True:
+                pandas_string = pandas_string + '< 1.5e'+str(-parameters.get("decimal", 0))+')]'
+            else:
+                pandas_string = pandas_string + '>= 1.5e'+str(-parameters.get("decimal", 0))+')]'
         else:
             if result_type == True:
                 string_pattern = str(pattern[1])
@@ -845,6 +870,8 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
                     string_pattern = "<"
                 elif pattern[1] == ">":
                     string_pattern = "<="
+                else:
+                    string_pattern = "HUH"
             pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
             for p_item in column_P[1:]:
                 pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
@@ -862,7 +889,7 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
                 r_string = str(value_P[idx])
 
             if column_P[idx] in encode.keys():
-                condition_P = condition_P + '(data_patterns.'+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])==' + r_string + ")"
+                condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])==' + r_string + ")"
             else:
                 condition_P = condition_P + '(df["' + str(column_P[idx]) + '"]==' + r_string + ")"
 
@@ -877,7 +904,7 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
                 r_string = str(value_Q[idx])
 
             if column_Q[idx] in encode.keys():
-                condition_Q = condition_Q + '(data_patterns.'+ encode[column_Q[idx]]+ '(df["' + str(column_Q[idx]) + '"])==' + r_string + ")"
+                condition_Q = condition_Q + '('+ encode[column_Q[idx]]+ '(df["' + str(column_Q[idx]) + '"])==' + r_string + ")"
             else:
                 condition_Q = condition_Q + '(df["' + str(column_Q[idx]) + '"]==' + r_string + ")"
 
