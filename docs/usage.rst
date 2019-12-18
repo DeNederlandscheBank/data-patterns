@@ -151,13 +151,13 @@ You might wish to apply to encode one or more columns before generating data-pat
          'pattern'  : '-->',
          'P_columns': ['Type'],
          'Q_columns': ['Assets', 'TV-life', 'TV-nonlife', 'Own funds'],
-         'encode'   : {'Assets'   : data_patterns.reported,
-                      'TV-life'   : data_patterns.reported,
-                      'TV-nonlife': data_patterns.reported,
-                      'Own funds' : data_patterns.reported}}
+         'encode'   : {'Assets'   : 'reported',
+                      'TV-life'   : 'reported',
+                      'TV-nonlife': 'reported',
+                      'Own funds' : 'reported'}}
     miner = data_patterns.PatternMiner(p)
 
-The function ``data_patterns.reported`` is a simply function that returns "not reported" if the value is nan or zero and "reported" otherwise. (TO DO: using user defined encode-functions)
+The function ``reported`` is a simple function that returns "not reported" if the value is nan or zero and "reported" otherwise. (TO DO: using user defined encode-functions)
 
 This pattern-definition finds association patterns ('-->') between 'Type' and whether the columns 'Assets', 'TV-life', 'TV-nonlife', 'Own funds' are reported or not.
 

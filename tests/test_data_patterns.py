@@ -32,10 +32,10 @@ class TestData_patterns(unittest.TestCase):
         pattern = {'name'     : 'Pattern 1',
                    'P_columns': ['Type'],
                    'Q_columns': ['Assets', 'TV-life', 'TV-nonlife', 'Own funds'],
-                   'encode'   : {'Assets':      data_patterns.reported,
-                                 'TV-life':     data_patterns.reported,
-                                 'TV-nonlife':  data_patterns.reported,
-                                 'Own funds':   data_patterns.reported}}
+                   'encode'   : {'Assets':      'reported',
+                                 'TV-life':     'reported',
+                                 'TV-nonlife':  'reported',
+                                 'Own funds':   'reported'}}
         # Expected output
         expected = pd.DataFrame(columns = ['index', 'pattern_id', 'cluster', 'P columns', 'relation type', 'Q columns', 'P', 'relation',
                                            'Q', 'support', 'exceptions', 'confidence'],
