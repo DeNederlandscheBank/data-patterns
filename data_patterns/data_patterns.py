@@ -16,7 +16,7 @@ import logging
 from .constants import *
 from .transform import *
 from .encodings import * 
-#import optimized
+import optimized
 
 __author__ = """De Nederlandsche Bank"""
 __email__ = 'ECDB_berichten@dnb.nl'
