@@ -104,7 +104,7 @@ class ResultDataFrame(pd.DataFrame):
                                        'align'    : 'left', 
                                        'text_wrap': True})
         if not self.empty:
-            for pattern_id in self[PATTERN_ID].unique():
+            for pattern_id in self[PATTERN_ID].unique().sort():
                 co = self[(self[PATTERN_ID]==pattern_id) & (self[RESULT_TYPE])]
                 co = co.drop([PATTERN_ID, RESULT_TYPE], axis = 1)
                 ex = self[(self[PATTERN_ID]==pattern_id) & (~self[RESULT_TYPE])]

@@ -16,6 +16,7 @@ import logging
 from .constants import *
 from .transform import *
 from .encodings import * 
+import optimized
 
 __author__ = """De Nederlandsche Bank"""
 __email__ = 'ECDB_berichten@dnb.nl'
@@ -276,7 +277,7 @@ def update_statistics(dataframe = None,
             n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
             total = n_co + n_ex
             if total > 0:
-                conf = n_co / total
+                conf = np.round(n_co / total, 4)
             else:
                 conf = 0
             df_patterns.loc[idx, SUPPORT] = n_co
@@ -402,9 +403,10 @@ def derive_patterns_from_metapattern(dataframe = None,
         pattern = [P_columns, "-->", Q_columns, P_values, "-->", Q_values]
         pandas_co = to_pandas_expression(pattern, encode, True, parameters)
         pandas_ex = to_pandas_expression(pattern, encode, False, parameters)
+        print(pandas_co)
         n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
         n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
-        conf = n_co / (n_co + n_ex)
+        conf = np.round(n_co / (n_co + n_ex), 4)
         if ((conf >= confidence) and (n_co >= support)):
             patterns.append([[metapattern.get('name', "No name"), 0], pattern, [n_co, n_ex, conf], pandas_co, pandas_ex])
     # deleting the levels of the index to the columns
@@ -426,36 +428,14 @@ def convert_columns(patterns = [],
         new_patterns.append([pattern_id, new_pattern, pattern_stats, new_encode])
     return new_patterns
 
-# equivalence -> reported together
-def logical_equivalence(*c):
-    nonzero_c1 = (c[0] != 0)
-    nonzero_c2 = (c[1] != 0)
-    return ((nonzero_c1 & nonzero_c2) | (~nonzero_c1 & ~nonzero_c2))
-
-# implication
-def logical_implication(*c):
-    nonzero_c1 = (c[0] != 0)
-    nonzero_c2 = (c[1] != 0)
-    return ~(nonzero_c1 & ~nonzero_c2)
-
-def logical_or(*c):
-    nonzero_c1 = (c[0] != 0)
-    nonzero_c2 = (c[1] != 0)
-    return (nonzero_c1 | nonzero_c2)
-
-def logical_and(*c):
-    nonzero_c1 = (c[0] != 0)
-    nonzero_c2 = (c[1] != 0)
-    return (nonzero_c1 & nonzero_c2)
-
 operators = {'>' : operator.gt,
              '<' : operator.lt,
              '>=': operator.ge,
              '<=': operator.le,
              '=' : operator.eq,
              '!=': operator.ne,
-             '<->': logical_equivalence,
-             '-->': logical_implication}
+             '<->': optimized.logical_equivalence,
+             '-->': optimized.logical_implication}
 
 preprocess = {'>':   operator.and_,
               '<':   operator.and_,
@@ -471,7 +451,8 @@ preprocess = {'>':   operator.and_,
 def derive_pattern_statistics(co):
     # co_sum is the support of the pattern
     co_sum = co.sum()
-    ex_sum = (~co).sum()
+    #co_sum = optimized.apply_sum(co)
+    ex_sum = len(co) - co_sum
     # conf is the confidence of the pattern
     conf = np.round(co_sum / (co_sum + ex_sum), 4)
     # oddsratio is a correlation measure
@@ -871,7 +852,7 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
                 elif pattern[1] == ">":
                     string_pattern = "<="
                 else:
-                    string_pattern = "HUH"
+                    string_pattern = "UNKNOWN"
             pandas_string = 'df[(df["' + str(column_P[0]) + '"]'
             for p_item in column_P[1:]:
                 pandas_string = pandas_string + '+ df["' + str(p_item) + '"]'
@@ -883,30 +864,38 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
         # if condition
         condition_P = ""
         for idx, cond in enumerate(column_P):
+            equal_str = "=="
             if type(value_P[idx]) == str:
                 r_string = '"' + str(value_P[idx]) + '"'
             else:
                 r_string = str(value_P[idx])
+            if r_string == 'nan':
+                r_string = 'isnull()'
+                equal_str = "."
 
             if column_P[idx] in encode.keys():
-                condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])==' + r_string + ")"
+                condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])'+ equal_str + r_string + ")"
             else:
-                condition_P = condition_P + '(df["' + str(column_P[idx]) + '"]==' + r_string + ")"
+                condition_P = condition_P + '(df["' + str(column_P[idx]) + '"]' + equal_str + r_string + ")"
 
             if cond != column_P[-1]:
                 condition_P = condition_P + ' & '
 
         condition_Q = ""
         for idx, cond in enumerate(column_Q):
+            equal_str = "=="
             if type(value_Q[idx]) == str:
                 r_string = '"' + str(value_Q[idx]) + '"'
             else:
                 r_string = str(value_Q[idx])
+            if r_string == 'nan':
+                r_string = 'isnull()'
+                equal_str = "."
 
             if column_Q[idx] in encode.keys():
-                condition_Q = condition_Q + '('+ encode[column_Q[idx]]+ '(df["' + str(column_Q[idx]) + '"])==' + r_string + ")"
+                condition_Q = condition_Q + '('+ encode[column_Q[idx]]+ '(df["' + str(column_Q[idx]) + '"])' + equal_str + r_string + ")"
             else:
-                condition_Q = condition_Q + '(df["' + str(column_Q[idx]) + '"]==' + r_string + ")"
+                condition_Q = condition_Q + '(df["' + str(column_Q[idx]) + '"]' + equal_str + r_string + ")"
 
             if cond != column_Q[-1]:
                 condition_Q = condition_Q + ' & '

@@ -197,10 +197,10 @@ The df_patterns-dataframe contains the code of the pattern in Pandas::
 
 results in the following string::
 
-    df[(df["Type"]=="life insurer") & ((data_patterns.reported(df["Assets"])=="reported") & 
-    (data_patterns.reported(df["Own funds"])=="reported") & 
-    (data_patterns.reported(df["TV-life"])=="reported") & 
-    (data_patterns.reported(df["TV-nonlife"])=="not reported"))]
+    df[(df["Type"]=="life insurer") & ((reported(df["Assets"])=="reported") & 
+    (reported(df["Own funds"])=="reported") & 
+    (reported(df["TV-life"])=="reported") & 
+    (reported(df["TV-nonlife"])=="not reported"))]
 
 The code creates a boolean mask based on the pattern and returns the dataframe with data for which the pattern holds.
 
