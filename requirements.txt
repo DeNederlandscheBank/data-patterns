@@ -14,4 +14,3 @@ xlsxwriter==1.1.8
 xlrd>=1.0.0
 docutils<0.16,>=0.10
 colorama<0.4.2,>=0.2.5
-docutils<0.16,>=0.10
