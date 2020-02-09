@@ -4,6 +4,13 @@
 """The setup script."""
 
 from setuptools import setup, find_packages
+from distutils.core import Extension, setup
+from Cython.Build import cythonize
+import numpy
+
+# define an extension that will be cythonized and compiled
+ext = Extension(name="optimized", sources=["data_patterns/optimized.pyx"], include_dirs=[numpy.get_include()])
+setup(ext_modules=cythonize(ext))
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
