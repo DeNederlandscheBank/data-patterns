@@ -916,6 +916,7 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
             if r_string == 'nan':
                 r_string = 'isnull()'
                 equal_str = "."
+                
 
             if column_P[idx] in encode.keys():
                 condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])'+ equal_str + r_string + ")"
