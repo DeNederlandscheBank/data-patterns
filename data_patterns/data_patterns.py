@@ -16,7 +16,7 @@ import logging
 from .constants import *
 from .transform import *
 from .encodings import * 
-import optimized
+#import optimized
 
 __author__ = """De Nederlandsche Bank"""
 __email__ = 'ECDB_berichten@dnb.nl'
@@ -798,7 +798,7 @@ def to_xbrl_expression(pattern, encode, result_type, parameters):
                 elif pattern[1] == ">":
                     string_pattern = "<="
                 else:
-                    string_pattern = "HUH"
+                    string_pattern = "UNKNOWN"
             expr = '{' + str(column_P[0]) + '}'
             for p_item in column_P[1:]:
                 expr += '+ {' + str(p_item) + '}'
@@ -896,7 +896,7 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
                 elif pattern[1] == ">":
                     string_pattern = "<="
                 else:
-                    string_pattern = "HUH"
+                    string_pattern = "UKNOWN"
             expr = 'df[(df["' + str(column_P[0]) + '"]'
             for p_item in column_P[1:]:
                 expr += '+ df["' + str(p_item) + '"]'
@@ -908,30 +908,38 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
         # if condition
         condition_P = ""
         for idx, cond in enumerate(column_P):
+            equal_str = "=="
             if type(value_P[idx]) == str:
                 r_string = '"' + str(value_P[idx]) + '"'
             else:
                 r_string = str(value_P[idx])
+            if r_string == 'nan':
+                r_string = 'isnull()'
+                equal_str = "."
 
             if column_P[idx] in encode.keys():
-                condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])==' + r_string + ")"
+                condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])'+ equal_str + r_string + ")"
             else:
-                condition_P = condition_P + '(df["' + str(column_P[idx]) + '"]==' + r_string + ")"
+                condition_P = condition_P + '(df["' + str(column_P[idx]) + '"]' + equal_str + r_string + ")"
 
             if cond != column_P[-1]:
                 condition_P = condition_P + ' & '
 
         condition_Q = ""
         for idx, cond in enumerate(column_Q):
+            equal_str = "=="
             if type(value_Q[idx]) == str:
                 r_string = '"' + str(value_Q[idx]) + '"'
             else:
                 r_string = str(value_Q[idx])
+            if r_string == 'nan':
+                r_string = 'isnull()'
+                equal_str = "."
 
             if column_Q[idx] in encode.keys():
-                condition_Q = condition_Q + '('+ encode[column_Q[idx]]+ '(df["' + str(column_Q[idx]) + '"])==' + r_string + ")"
+                condition_Q = condition_Q + '('+ encode[column_Q[idx]]+ '(df["' + str(column_Q[idx]) + '"])' + equal_str + r_string + ")"
             else:
-                condition_Q = condition_Q + '(df["' + str(column_Q[idx]) + '"]==' + r_string + ")"
+                condition_Q = condition_Q + '(df["' + str(column_Q[idx]) + '"]' + equal_str + r_string + ")"
 
             if cond != column_Q[-1]:
                 condition_Q = condition_Q + ' & '
