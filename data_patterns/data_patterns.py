@@ -417,14 +417,25 @@ def derive_patterns_from_metapattern(dataframe = None,
 #         new_patterns.append([pattern_id, new_pattern, pattern_stats, new_encode])
 #     return new_patterns
 
+def logical_equivalence(*c):
+    nonzero_c1 = (c[0] != 0)
+    nonzero_c2 = (c[1] != 0)
+    return ((nonzero_c1 & nonzero_c2) | (~nonzero_c1 & ~nonzero_c2))
+
+# implication
+def logical_implication(*c):
+    nonzero_c1 = (c[0] != 0)
+    nonzero_c2 = (c[1] != 0)
+    return ~(nonzero_c1 & ~nonzero_c2)
+
 operators = {'>' : operator.gt,
              '<' : operator.lt,
              '>=': operator.ge,
              '<=': operator.le,
              '=' : operator.eq,
              '!=': operator.ne,
-             '<->': optimized.logical_equivalence,
-             '-->': optimized.logical_implication}
+             '<->': logical_equivalence,
+             '-->': logical_implication}
 
 preprocess = {'>':   operator.and_,
               '<':   operator.and_,
