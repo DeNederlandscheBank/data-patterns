@@ -142,7 +142,7 @@ class PatternMiner:
 def derive_patterns(dataframe   = None, 
                     metapatterns = None):
     '''Derive patterns from metapatterns
-       In two flavours: association rules and quantitative rules
+       In two flavours: association rules (-->) and quantitative rules (other)
     '''
     df_patterns = pd.DataFrame(columns = PATTERNS_COLUMNS)
     for metapattern in metapatterns:
@@ -248,7 +248,7 @@ def to_dataframe(patterns = None, parameters = {}):
 
 def update_statistics(dataframe = None, 
                       df_patterns = None):
-    '''Update statistics in df_patterns with statistics from the data
+    '''Update statistics in df_patterns with statistics from the data by evaluating pandas expressions
     '''
     encodings = get_encodings()
     df_new_patterns = pd.DataFrame()
@@ -257,7 +257,7 @@ def update_statistics(dataframe = None,
         for level in range(len(dataframe.index.names)):
             dataframe[dataframe.index.names[level]] = dataframe.index.get_level_values(level = level)
         for idx in df_patterns.index:
-            # Calculate pattern statistics (from pandas expressions)
+            # Calculate pattern statistics (from evaluating pandas expressions)
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
             n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
@@ -363,6 +363,7 @@ def derive_results(dataframe = None,
 def derive_patterns_from_metapattern(dataframe = None, 
                                      metapattern = None):
     '''Here we derive the patterns from the metapattern definitions
+       by evaluating the pandas expressions of all potential patterns
     '''
     # get items from metapattern definition
     parameters = metapattern.get("parameters", {})
@@ -378,7 +379,7 @@ def derive_patterns_from_metapattern(dataframe = None,
     df_features = dataframe[P_columns + Q_columns].copy()
     # execute dynamic encoding functions
     encodings = get_encodings()
-    # perform encodings of df_feature
+    # perform encodings on df_features
     if encode != {}:
         for c in df_features.columns:
             if c in encode.keys():
