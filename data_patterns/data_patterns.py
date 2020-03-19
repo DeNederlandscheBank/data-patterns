@@ -15,7 +15,7 @@ import itertools
 import logging
 from .constants import *
 from .transform import *
-from .encodings import * 
+from .encodings import *
 #import optimized
 
 __author__ = """De Nederlandsche Bank"""
@@ -24,7 +24,7 @@ __version__ = '0.1.13'
 
 class PatternMiner:
 
-    ''' 
+    '''
     A PatternMiner object mines patterns in a Pandas DataFrame.
 
     Parameters
@@ -139,7 +139,7 @@ class PatternMiner:
                       return arg
         return current
 
-def derive_patterns(dataframe   = None, 
+def derive_patterns(dataframe   = None,
                     metapatterns = None):
     '''Derive patterns from metapatterns
        In two flavours: association rules (-->) and quantitative rules (other)
@@ -195,10 +195,10 @@ def derive_association_patterns(metapattern = None,
 
     metapattern = copy.deepcopy(metapattern)
 
-    # there are four cases: 
-    # - p and q are given, 
-    # - p is given but q is not given, 
-    # - q is given but p is not, 
+    # there are four cases:
+    # - p and q are given,
+    # - p is given but q is not given,
+    # - q is given but p is not,
     # - p and q are not given
     if ((p_part is None) and (q_part is not None)):
         p_set = [col for col in col_total_p if col not in metapattern["Q_columns"]]
@@ -237,7 +237,7 @@ def to_dataframe(patterns = None, parameters = {}):
     # unpack pattern_id and pattern and patterns_stats and exclude co and ex and set pattern status to unknown
     patterns = list(patterns)
     if len(patterns) > 0:
-        data = [pattern_id + pattern + pattern_stats + [INITIAL_PATTERN_STATUS] + [{}] + 
+        data = [pattern_id + pattern + pattern_stats + [INITIAL_PATTERN_STATUS] + [{}] +
                [pandas_co, pandas_ex, xbrl_co, xbrl_ex] for [pattern_id, pattern, pattern_stats, pandas_co, pandas_ex, xbrl_co, xbrl_ex] in patterns]
         df = pd.DataFrame(data = data, columns = PATTERNS_COLUMNS)
         df.index.name = 'index'
@@ -246,7 +246,7 @@ def to_dataframe(patterns = None, parameters = {}):
         df.index.name = 'index'
     return df
 
-def update_statistics(dataframe = None, 
+def update_statistics(dataframe = None,
                       df_patterns = None):
     '''Update statistics in df_patterns with statistics from the data by evaluating pandas expressions
     '''
@@ -284,7 +284,7 @@ def get_encodings():
         encodings[item]= locals()[item]
     return encodings
 
-def derive_results(dataframe = None, 
+def derive_results(dataframe = None,
                    P_dataframe = None,
                    Q_dataframe = None,
                    df_patterns = None):
@@ -315,20 +315,20 @@ def derive_results(dataframe = None,
                         values_q = df.loc[i, df_patterns.loc[idx, Q_COLUMNS]].values.tolist()
                     else:
                         values_q = df_patterns.loc[idx, Q_COLUMNS]
-                    results.append([False, 
-                                    df_patterns.loc[idx, "pattern_id"], 
-                                    df_patterns.loc[idx, "cluster"], 
-                                    i, 
-                                    df_patterns.loc[idx, "support"], 
-                                    df_patterns.loc[idx, "exceptions"], 
-                                    df_patterns.loc[idx, "confidence"], 
-                                    df_patterns.loc[idx, P_COLUMNS], 
-                                    df_patterns.loc[idx, "relation type"], 
-                                    df_patterns.loc[idx, Q_COLUMNS], 
-                                    df_patterns.loc[idx, "P"], 
-                                    df_patterns.loc[idx, "relation"], 
-                                    df_patterns.loc[idx, "Q"], 
-                                    values_p, 
+                    results.append([False,
+                                    df_patterns.loc[idx, "pattern_id"],
+                                    df_patterns.loc[idx, "cluster"],
+                                    i,
+                                    df_patterns.loc[idx, "support"],
+                                    df_patterns.loc[idx, "exceptions"],
+                                    df_patterns.loc[idx, "confidence"],
+                                    df_patterns.loc[idx, P_COLUMNS],
+                                    df_patterns.loc[idx, "relation type"],
+                                    df_patterns.loc[idx, Q_COLUMNS],
+                                    df_patterns.loc[idx, "P"],
+                                    df_patterns.loc[idx, "relation"],
+                                    df_patterns.loc[idx, "Q"],
+                                    values_p,
                                     values_q])
                 for i in results_co:
                     values_p = df.loc[i, df_patterns.loc[idx, P_COLUMNS]].values.tolist()
@@ -336,20 +336,20 @@ def derive_results(dataframe = None,
                         values_q = df.loc[i, df_patterns.loc[idx, Q_COLUMNS]].values.tolist()
                     else:
                         values_q = df_patterns.loc[idx, Q_COLUMNS]
-                    results.append([True, 
-                                    df_patterns.loc[idx, "pattern_id"], 
-                                    df_patterns.loc[idx, "cluster"], 
-                                    i, 
-                                    df_patterns.loc[idx, "support"], 
-                                    df_patterns.loc[idx, "exceptions"], 
-                                    df_patterns.loc[idx, "confidence"], 
-                                    df_patterns.loc[idx, P_COLUMNS], 
-                                    df_patterns.loc[idx, "relation type"], 
-                                    df_patterns.loc[idx, Q_COLUMNS], 
-                                    df_patterns.loc[idx, "P"], 
-                                    df_patterns.loc[idx, "relation"], 
-                                    df_patterns.loc[idx, "Q"], 
-                                    values_p, 
+                    results.append([True,
+                                    df_patterns.loc[idx, "pattern_id"],
+                                    df_patterns.loc[idx, "cluster"],
+                                    i,
+                                    df_patterns.loc[idx, "support"],
+                                    df_patterns.loc[idx, "exceptions"],
+                                    df_patterns.loc[idx, "confidence"],
+                                    df_patterns.loc[idx, P_COLUMNS],
+                                    df_patterns.loc[idx, "relation type"],
+                                    df_patterns.loc[idx, Q_COLUMNS],
+                                    df_patterns.loc[idx, "P"],
+                                    df_patterns.loc[idx, "relation"],
+                                    df_patterns.loc[idx, "Q"],
+                                    values_p,
                                     values_q])
         df_results = pd.DataFrame(data = results, columns = RESULTS_COLUMNS)
         df_results.sort_values(by = ["index", "confidence", "support"], ascending = [True, False, False], inplace = True)
@@ -360,7 +360,7 @@ def derive_results(dataframe = None,
             df_results.index = df_results.index
     return ResultDataFrame(df_results)
 
-def derive_patterns_from_metapattern(dataframe = None, 
+def derive_patterns_from_metapattern(dataframe = None,
                                      metapattern = None):
     '''Here we derive the patterns from the metapattern definitions
        by evaluating the pandas expressions of all potential patterns
@@ -404,10 +404,10 @@ def derive_patterns_from_metapattern(dataframe = None,
         del dataframe[dataframe.index.names[level]]
     return patterns
 
-# def convert_columns(patterns = [], 
-#                     dataframe_input = None, 
+# def convert_columns(patterns = [],
+#                     dataframe_input = None,
 #                     dataframe_output = None):
-#     ''' 
+#     '''
 #     '''
 #     new_patterns = list()
 #     for pattern_id, pattern, pattern_stats, encode in patterns:
@@ -446,7 +446,7 @@ preprocess = {'>':   operator.and_,
               '!=':  operator.and_,
               'sum': operator.and_,
               'ratio': operator.and_,
-              '<->': operator.or_, 
+              '<->': operator.or_,
               '-->': operator.or_}
 
 def derive_pattern_statistics(co):
@@ -460,15 +460,15 @@ def derive_pattern_statistics(co):
     #oddsratio = (1 + co_sum) / (1 + ex_sum)
     return co_sum, ex_sum, conf #, oddsratio
 
-def derive_pattern_data(df, 
-                        P_columns, 
+def derive_pattern_data(df,
+                        P_columns,
                         Q_columns,
                         pattern,
-                        name,  
-                        co, 
-                        confidence, 
+                        name,
+                        co,
+                        confidence,
                         data_filter):
-    ''' 
+    '''
     '''
     data = list()
     # pattern statistics
@@ -483,7 +483,7 @@ def get_parameters(parameters):
     support = parameters.get("min_support", 2)
     return confidence, support
 
-def patterns_column_value(dataframe = None, 
+def patterns_column_value(dataframe = None,
                           pattern   = None,
                           pattern_name = "value",
                           columns   = None,
@@ -495,25 +495,75 @@ def patterns_column_value(dataframe = None,
     data_array = dataframe.values.T
     for c in columns:
         # confirmations and exceptions of the pattern, a list of booleans
-        co = reduce(operators[pattern], [data_array[c, :], 0])
+        co = reduce(operators[pattern], [data_array[c, :], value])
         pattern_data = derive_pattern_data(dataframe,
                                            [dataframe.columns[c]],
                                            value,
                                            pattern,
                                            pattern_name,
-                                           co, 
-                                           confidence, 
+                                           co,
+                                           confidence,
                                            None)
         if pattern_data and len(co) >= support:
             yield pattern_data
 
+def patterns_column_values(dataframe = None,
+                          pattern   = None,
+                          pattern_name = "comparative",
+                          P_columns  = None,
+                          Q_columns  = None,
+                          both_ways = False,
+                          values     = None,
+                          parameters= {}):
+    '''Generate patterns of the form [c1] operator value where c1 is in columns
+    '''
+    confidence, support = get_parameters(parameters)
+    data_array = dataframe.values.T
+    columns = dataframe.columns
+
+    for c0 in P_columns:
+        for c1 in Q_columns:
+            if c0 != c1:
+                # if values are integer then it is a set value
+                if values[0] in columns and values[1] in columns:
+                    co1 = reduce(operators[pattern[0]], [data_array[c0, :], dataframe[[values[0]]].values.T])[0]
+                    co2 = reduce(operators[pattern[1]], [data_array[c1, :], dataframe[[values[1]]].values.T])[0]
+                # otherwise compare to other columns
+                elif values[1] in columns:
+                    co1 = reduce(operators[pattern[0]], [data_array[c0, :], values[0]])
+                    co2 = reduce(operators[pattern[1]], [data_array[c1, :], dataframe[[values[1]]].values.T])[0]
+                elif values[0] in columns:
+                    co1 = reduce(operators[pattern[0]], [data_array[c0, :], dataframe[[values[0]]].values.T])[0]
+                    co2 = reduce(operators[pattern[1]], [data_array[c1, :], values[1]])
+
+                else:
+                    co1 = reduce(operators[pattern[0]], [data_array[c0, :], values[0]])
+                    co2 = reduce(operators[pattern[1]], [data_array[c1, :], values[1]])
+                # If we want to work both ways then we set that value to True
+                print(co1,co2)
+                if both_ways:
+                    co = np.logical_not(np.logical_xor(co1,co2))
+                else:
+                    co = np.logical_and(co1,co2)
+                co_sum, ex_sum, conf = derive_pattern_statistics(co)
+                if (conf >= confidence) and (co_sum >= support):
+                    pattern_id = [[dataframe.columns[c0]],
+                               (pattern[0] + str(values[0]) + ', ' + pattern[1] +str(values[1])),
+                               [dataframe.columns[c1]], '', '', '']
+                    pattern_data = [[pattern_name, 0],
+                                    pattern_id,
+                                    [co_sum, ex_sum, conf]]
+                    if pattern_data and len(co) >= support:
+                        yield pattern_data
+
+
 def patterns_column_column(dataframe  = None,
                            pattern    = None,
                            pattern_name = "column",
-                           P_columns  = None, 
-                           Q_columns  = None, 
+                           P_columns  = None,
+                           Q_columns  = None,
                            parameters = {}):
-    '''Generate patterns of the form [c1] operator [c2] where c1 and c2 are in columns 
+    '''Generate patterns of the form [c1] operator [c2] where c1 and c2 are in columns
     '''
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 8)
@@ -535,20 +585,20 @@ def patterns_column_column(dataframe  = None,
                         else:
                             co = reduce(operators[pattern], data_array[[c0, c1], :])
                         pattern_data = derive_pattern_data(dataframe,
-                                            [dataframe.columns[c0]], 
-                                            [dataframe.columns[c1]], 
+                                            [dataframe.columns[c0]],
+                                            [dataframe.columns[c1]],
                                             pattern,
                                             pattern_name,
-                                            co, 
-                                            confidence, 
+                                            co,
+                                            confidence,
                                             data_filter)
                         if pattern_data and len(co) >= support:
                             yield pattern_data
 
 def patterns_sums_column(dataframe  = None,
                          pattern_name = None,
-                         P_columns  = None, 
-                         Q_columns  = None, 
+                         P_columns  = None,
+                         Q_columns  = None,
                          parameters = {}):
     '''Generate patterns of the form sum [c1-list] = [c2] where c1-list is column list and c2 is column
     '''
@@ -584,18 +634,18 @@ def patterns_sums_column(dataframe  = None,
                     # we only store the patterns that satisfy criteria
                     if (conf >= confidence) and (co_sum >= support):
                         pattern = [[dataframe.columns[c] for c in lhs_columns],
-                                   "sum", 
+                                   "sum",
                                    [dataframe.columns[rhs_column]], '', '', '']
-                        pattern_data = [[pattern_name, 0], 
-                                        pattern, 
+                        pattern_data = [[pattern_name, 0],
+                                        pattern,
                                         [co_sum, ex_sum, conf]]
                         if pattern_data:
                             yield pattern_data
 
 def patterns_ratio(dataframe  = None,
                    pattern_name = None,
-                   P_columns  = None, 
-                   Q_columns  = None, 
+                   P_columns  = None,
+                   Q_columns  = None,
                    parameters = {}):
     """Generate patterns with ratios
     """
@@ -610,7 +660,7 @@ def patterns_ratio(dataframe  = None,
             if c0 != c1:
                 # applying the filter
                 data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
-                data_array = map(lambda e: Fraction(e).limit_denominator(limit_denominator), 
+                data_array = map(lambda e: Fraction(e).limit_denominator(limit_denominator),
                                  dataframe.values[data_filter, c0] / dataframe.values[data_filter, c1])
                 ratios = pd.Series(data_array)
                 if support >= 2:
@@ -623,17 +673,17 @@ def patterns_ratio(dataframe  = None,
                         co = ratios==v
                         co_sum, ex_sum, conf = derive_pattern_statistics(co)
                         if (conf >= confidence) and (co_sum >= support):
-                            pattern_data = [[pattern_name, 0], 
-                                            [dataframe.columns[c0], 
+                            pattern_data = [[pattern_name, 0],
+                                            [dataframe.columns[c0],
                                              'ratio',
-                                            [dataframe.columns[c1]], '', '', ''], 
+                                            [dataframe.columns[c1]], '', '', ''],
                                             [co_sum, ex_sum, conf], {}]
                             if pattern_data:
                                 yield pattern_data
 
 def derive_quantitative_patterns(metapattern  = None,
                                  dataframe    = None):
-    ''' 
+    '''
     '''
     logger = logging.getLogger("quant-pattern")
 
@@ -646,7 +696,8 @@ def derive_quantitative_patterns(metapattern  = None,
     Q_columns = metapattern.get("Q_columns", None)
     value = metapattern.get("value", None)
     parameters = metapattern.get("parameters", None)
-
+    values = metapattern.get("values", None)
+    both_ways = metapattern.get("both_ways", False)
     # if P_dataframe and Q_dataframe are given then join the dataframes and select columns
     if (P_dataframe is not None) and (Q_dataframe is not None):
         try:
@@ -658,7 +709,7 @@ def derive_quantitative_patterns(metapattern  = None,
         Q_columns = Q_dataframe.columns
 
     # select all columns with numerical values
-    numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns)) 
+    numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns))]
                             if ((dataframe.dtypes[c] == 'float64') or (dataframe.dtypes[c] == 'int64')) and (dataframe.iloc[:, c] != 0).any()]
     dataframe = dataframe[numerical_columns]
 
@@ -672,7 +723,7 @@ def derive_quantitative_patterns(metapattern  = None,
     else:
         Q_columns = range(len(dataframe.columns))
 
-    if columns is not None: 
+    if columns is not None:
         columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
     else:
         columns = range(len(dataframe.columns))
@@ -692,24 +743,32 @@ def derive_quantitative_patterns(metapattern  = None,
                                        pattern_name = pattern_name,
                                        P_columns = P_columns,
                                        Q_columns = Q_columns,
-                                       parameters = parameters) 
+                                       parameters = parameters)
     elif pattern == 'ratio':
         results = patterns_ratio(dataframe = dataframe,
                                  pattern_name = pattern_name,
                                  P_columns = P_columns,
                                  Q_columns = Q_columns,
-                                 parameters = parameters) 
+                                 parameters = parameters)
+    elif values is not None:
+        results = patterns_column_values(dataframe = dataframe,
+                                        pattern = pattern,
+                                        pattern_name = pattern_name,
+                                         P_columns = P_columns,
+                                         Q_columns = Q_columns,
+                                         both_ways = both_ways,
+                                        values = values,
+                                        parameters = parameters)
     # everything else -> c1 pattern c2
     else:
         results = patterns_column_column(dataframe = dataframe,
-                                         pattern = pattern, 
+                                         pattern = pattern,
                                          pattern_name = pattern_name,
                                          P_columns = P_columns,
                                          Q_columns = Q_columns,
                                          parameters = parameters)
-
     patterns = [[pattern_id] + [pattern] + [pattern_stats] +
-                [to_pandas_expression(pattern, {}, True, parameters), 
+                [to_pandas_expression(pattern, {}, True, parameters),
                  to_pandas_expression(pattern, {}, False, parameters),
                  to_xbrl_expression(pattern, {}, True, parameters),
                  to_xbrl_expression(pattern, {}, False, parameters)] for [pattern_id, pattern, pattern_stats] in results]
@@ -719,7 +778,7 @@ def derive_quantitative_patterns(metapattern  = None,
 
     return df
 
-def read_excel(filename = None, 
+def read_excel(filename = None,
                dataframe = None,
                sheet_name = 'Patterns'):
     df = pd.read_excel(filename, sheet_name = sheet_name)
@@ -736,8 +795,8 @@ def read_excel(filename = None,
         pandas_ex = df.loc[row, PANDAS_EX]
         xbrl_co = df.loc[row, XBRL_CO]
         xbrl_ex = df.loc[row, XBRL_EX]
-        patterns.append([[df.loc[row, PATTERN_ID], 0], 
-                         [P_columns, df.loc[row, RELATION_TYPE], Q_columns, 
+        patterns.append([[df.loc[row, PATTERN_ID], 0],
+                         [P_columns, df.loc[row, RELATION_TYPE], Q_columns,
                          P, df.loc[row, RELATION], Q],
                          [0, 0, 0], pandas_co, pandas_ex, xbrl_co, xbrl_ex])
     df_patterns = to_dataframe(patterns = patterns, parameters = {})
@@ -928,7 +987,7 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
             if r_string == 'nan':
                 r_string = 'isnull()'
                 equal_str = "."
-                
+
 
             if column_P[idx] in encode.keys():
                 condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])'+ equal_str + r_string + ")"
@@ -966,9 +1025,9 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
 
 def find_redundant_patterns(df_patterns = None):
     '''This function checks whether there are redundant patterns and changes pattern status accordingly
-    so if [A, B, C] -> [Z] has conf = 0.95 and support = 10 and 
+    so if [A, B, C] -> [Z] has conf = 0.95 and support = 10 and
           [A, B] -> [Z] has equal or better statistics then the former pattern is redundant
-    ''' 
+    '''
     for row in df_patterns.index:
         p_columns = df_patterns.loc[row, P_COLUMNS]
         q_columns = df_patterns.loc[row, Q_COLUMNS]
