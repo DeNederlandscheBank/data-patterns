@@ -14,20 +14,36 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
 
-miner = data_patterns.PatternMiner(df)
+# miner = data_patterns.PatternMiner(df)
 # df_patterns = miner.find({'name'      : 'sum pattern',
 #                           'pattern'   : 'sum',
 #                           'parameters': {"min_confidence": 0.5,
 #                                          "min_support"   : 1,
 #                                          "sum_elements": 3}})
-df_patterns = miner.find({'pattern'   : ['=','>'],
-                          'values'     : ['life insurer',0],
-                          'P_columns'  : ['Type'],
-                          'Q_columns'  : ['TV-life'],
-                          'both_ways' : True,
-                          'parameters': {"min_confidence": 0.5,
+# df_patterns = miner.find({'pattern'   : ['=','>'],
+#                           'values'     : ['life insurer','TV-nonlife'],
+#                           'P_columns'  : ['Type'],
+#                           'Q_columns'  : ['TV-life'],
+#                           'both_ways' : False,
+#                           'parameters': {"min_confidence": 0.4,
+#                                          "min_support"   : 1}})
+
+df = data_patterns.make_new_columns(df, columns = [['Assets', 'TV-life'],["Assets",'Own funds','Excess']],
+                                                operation = [['+'], ['+','*']],
+                                                new_names = ['test1','test2'])
+print(df)
+miner = data_patterns.PatternMiner(df)
+
+df_patterns = miner.find({'pattern'   :[ ['=','>'],['>','>']],
+                          'values'     : [['non-life insurer',500], [ 300, 210]],
+                          'P_columns'  : ['Type', 'Assets'],
+                          'Q_columns'  : [ 'Own funds','Excess'],
+                          'P_logics' : ['and'],
+                          'Q_logics' : ['or'],
+                          'both_ways' : False,
+                          'parameters': {"min_confidence": 0.0,
                                          "min_support"   : 1}})
-print(df_patterns.to_string())
+print(df_patterns.iloc[:,:12].to_string())
 # df_patterns = miner.find({'name'      : 'higher than',
 #                           'pattern'   : '>',
 #                           'value'     : 1000,

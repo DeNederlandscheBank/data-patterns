@@ -449,6 +449,18 @@ preprocess = {'>':   operator.and_,
               '<->': operator.or_,
               '-->': operator.or_}
 
+logicals = {
+        'and': operator.and_,
+        'or': operator.or_,
+        'xor':operator.xor
+}
+
+operations = {
+ '+' : operator.add,
+ '-' : operator.sub,
+ '*' : operator.mul,
+ '/' : operator.truediv
+}
 def derive_pattern_statistics(co):
     # co_sum is the support of the pattern
     co_sum = co.sum()
@@ -507,7 +519,7 @@ def patterns_column_value(dataframe = None,
         if pattern_data and len(co) >= support:
             yield pattern_data
 
-def patterns_column_values(dataframe = None,
+def patterns_compare_columns_simple(dataframe = None,
                           pattern   = None,
                           pattern_name = "comparative",
                           P_columns  = None,
@@ -515,36 +527,35 @@ def patterns_column_values(dataframe = None,
                           both_ways = False,
                           values     = None,
                           parameters= {}):
-    '''Generate patterns of the form [c1] operator value where c1 is in columns
+    '''
+    Generate patterns where you compare one column c1
+     to a value or other column and condition on other column c0
     '''
     confidence, support = get_parameters(parameters)
     data_array = dataframe.values.T
     columns = dataframe.columns
-
     for c0 in P_columns:
         for c1 in Q_columns:
             if c0 != c1:
-                # if values are integer then it is a set value
+                # compare to other columns
                 if values[0] in columns and values[1] in columns:
                     co1 = reduce(operators[pattern[0]], [data_array[c0, :], dataframe[[values[0]]].values.T])[0]
                     co2 = reduce(operators[pattern[1]], [data_array[c1, :], dataframe[[values[1]]].values.T])[0]
-                # otherwise compare to other columns
                 elif values[1] in columns:
                     co1 = reduce(operators[pattern[0]], [data_array[c0, :], values[0]])
                     co2 = reduce(operators[pattern[1]], [data_array[c1, :], dataframe[[values[1]]].values.T])[0]
                 elif values[0] in columns:
                     co1 = reduce(operators[pattern[0]], [data_array[c0, :], dataframe[[values[0]]].values.T])[0]
                     co2 = reduce(operators[pattern[1]], [data_array[c1, :], values[1]])
-
+                # if values are integer then it is a set value
                 else:
                     co1 = reduce(operators[pattern[0]], [data_array[c0, :], values[0]])
                     co2 = reduce(operators[pattern[1]], [data_array[c1, :], values[1]])
                 # If we want to work both ways then we set that value to True
-                print(co1,co2)
                 if both_ways:
                     co = np.logical_not(np.logical_xor(co1,co2))
                 else:
-                    co = np.logical_and(co1,co2)
+                    co = np.logical_or(np.logical_not(co1),co2)
                 co_sum, ex_sum, conf = derive_pattern_statistics(co)
                 if (conf >= confidence) and (co_sum >= support):
                     pattern_id = [[dataframe.columns[c0]],
@@ -556,6 +567,71 @@ def patterns_column_values(dataframe = None,
                     if pattern_data and len(co) >= support:
                         yield pattern_data
 
+def patterns_compare_columns_complex(dataframe = None,
+                          pattern   = None,
+                          pattern_name = "comparative",
+                          P_columns  = None,
+                          Q_columns  = None,
+                          P_logics = None, # Logical operators in the order that you wan tthem applied
+                          Q_logics = None,
+                          both_ways = False,
+                          values     = None,
+                          parameters= {}):
+    '''    Generate patterns where you compare one column combination of columns with operators
+         to a value or other column and condition on combination of other columns
+    '''
+    confidence, support = get_parameters(parameters)
+    data_array = dataframe.values.T
+    columns = dataframe.columns
+
+    # Split values, patterns and lists for P and Q
+    values_P = values[0]
+    values_Q = values[1]
+    patterns_P = pattern[0]
+    patterns_Q = pattern[1]
+    co1_list = []
+    co2_list = []
+
+    # make array of truth values for P and Q columns
+    for i in range(len(values_P)):
+        if values_P[i] in columns: # compare column with other column
+            co1_list.append(reduce(operators[patterns_P[i]], [data_array[P_columns[i], :], dataframe[[values_P[i]]].values.T])[0])
+        else: # compare with value
+            co1_list.append(reduce(operators[patterns_P[i]], [data_array[P_columns[i], :], values_P[i]]))
+
+    # Apply the logic operator on the truth tables in the right order
+    co1 =co1_list[0]
+    for i in range(1, len(co1_list)):
+        co1 = reduce(logicals[P_logics[i-1]], [co1, co1_list[i]])
+
+    # Do the same for Q
+    for i in range(len(values_Q)):
+        if values_Q[i] in columns:
+            co2_list.append(reduce(operators[patterns_Q[i]], [data_array[Q_columns[i], :], dataframe[[values_Q[i]]].values.T])[0])
+        else:
+            co2_list.append(reduce(operators[patterns_Q[i]], [data_array[Q_columns[i], :], values_Q[i]]))
+
+    co2 =co2_list[0]
+    for i in range(1, len(co2_list)):
+        co2 = reduce(logicals[Q_logics[i-1]], [co2, co2_list[i]])
+
+    # Combine P and Q, if both_ways then it works both ways
+    if both_ways:
+        co = np.logical_not(np.logical_xor(co1,co2))
+    else:
+        co = np.logical_or(np.logical_not(co1),co2)
+
+    # get results
+    co_sum, ex_sum, conf = derive_pattern_statistics(co)
+    if (conf >= confidence) and (co_sum >= support):
+        pattern_id = [[dataframe.columns[[P_columns]]],
+                   (str(pattern[0]) + str(values[0]) + ', ' + str(pattern[1]) +str(values[1])),
+                   [dataframe.columns[[Q_columns]]], '', '', '']
+        pattern_data = [[pattern_name, 0],
+                        pattern_id,
+                        [co_sum, ex_sum, conf]]
+        if pattern_data and len(co) >= support:
+            yield pattern_data
 
 def patterns_column_column(dataframe  = None,
                            pattern    = None,
@@ -697,6 +773,8 @@ def derive_quantitative_patterns(metapattern  = None,
     value = metapattern.get("value", None)
     parameters = metapattern.get("parameters", None)
     values = metapattern.get("values", None)
+    P_logics = metapattern.get("P_logics", None)
+    Q_logics = metapattern.get("Q_logics", None)
     both_ways = metapattern.get("both_ways", False)
     # if P_dataframe and Q_dataframe are given then join the dataframes and select columns
     if (P_dataframe is not None) and (Q_dataframe is not None):
@@ -709,59 +787,78 @@ def derive_quantitative_patterns(metapattern  = None,
         Q_columns = Q_dataframe.columns
 
     # select all columns with numerical values
-    numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns))]
+    numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns))
                             if ((dataframe.dtypes[c] == 'float64') or (dataframe.dtypes[c] == 'int64')) and (dataframe.iloc[:, c] != 0).any()]
-    dataframe = dataframe[numerical_columns]
+    dataframe_num = dataframe[numerical_columns]
 
     if P_columns is not None:
-        P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
+        if values:
+            P_columns = [dataframe.columns.get_loc(c) for c in P_columns]
+        else:
+            P_columns = [dataframe_num.columns.get_loc(c) for c in P_columns if c in numerical_columns]
     else:
-        P_columns = range(len(dataframe.columns))
+        P_columns = range(len(dataframe_num.columns))
 
     if Q_columns is not None:
-        Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
+        if values:
+            Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns]
+        else:
+            Q_columns = [dataframe_num.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
     else:
-        Q_columns = range(len(dataframe.columns))
+        Q_columns = range(len(dataframe_num.columns))
 
     if columns is not None:
-        columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
+        columns = [dataframe_num.columns.get_loc(c) for c in columns if c in numerical_columns]
     else:
-        columns = range(len(dataframe.columns))
+        columns = range(len(dataframe_num.columns))
 
     logger.info('START: %s (%s) in P_columns = %s and Q_columns = %s', pattern, pattern_name, str(P_columns), str(Q_columns))
 
     # if a value is given -> columns pattern value
     if value is not None:
-        results = patterns_column_value(dataframe = dataframe,
+        results = patterns_column_value(dataframe = dataframe_num,
                                         pattern = pattern,
                                         pattern_name = pattern_name,
                                         columns = columns,
                                         value = value,
                                         parameters = parameters)
     elif pattern == 'sum':
-        results = patterns_sums_column(dataframe = dataframe,
+        results = patterns_sums_column(dataframe = dataframe_num,
                                        pattern_name = pattern_name,
                                        P_columns = P_columns,
                                        Q_columns = Q_columns,
                                        parameters = parameters)
     elif pattern == 'ratio':
-        results = patterns_ratio(dataframe = dataframe,
+        results = patterns_ratio(dataframe = dataframe_num,
                                  pattern_name = pattern_name,
                                  P_columns = P_columns,
                                  Q_columns = Q_columns,
                                  parameters = parameters)
     elif values is not None:
-        results = patterns_column_values(dataframe = dataframe,
-                                        pattern = pattern,
-                                        pattern_name = pattern_name,
-                                         P_columns = P_columns,
-                                         Q_columns = Q_columns,
-                                         both_ways = both_ways,
-                                        values = values,
-                                        parameters = parameters)
+        if P_logics is None and Q_logics is None:
+            results = patterns_compare_columns_simple(dataframe = dataframe,
+                                            pattern = pattern,
+                                            pattern_name = pattern_name,
+                                             P_columns = P_columns,
+                                             Q_columns = Q_columns,
+                                             both_ways = both_ways,
+                                            values = values,
+                                            parameters = parameters)
+        else:
+            results = patterns_compare_columns_complex(dataframe = dataframe,
+                                            pattern = pattern,
+                                            pattern_name = pattern_name,
+                                             P_columns = P_columns,
+                                             Q_columns = Q_columns,
+                                             P_logics = P_logics,
+                                             Q_logics = Q_logics,
+                                             both_ways = both_ways,
+                                            values = values,
+                                            parameters = parameters)
+
     # everything else -> c1 pattern c2
     else:
-        results = patterns_column_column(dataframe = dataframe,
+        results = patterns_column_column(dataframe = dataframe_num,
                                          pattern = pattern,
                                          pattern_name = pattern_name,
                                          P_columns = P_columns,
@@ -1056,3 +1153,17 @@ def find_redundant_patterns(df_patterns = None):
                             if (df_patterns.loc[row, 'confidence'] <= df_patterns.loc[row2, 'confidence']) and (df_patterns.loc[row, 'support'] <= df_patterns.loc[row2, 'support']):
                                 df_patterns.loc[row, 'pattern status'] = "redundant with pattern " + str(row2)
     return df_patterns
+
+def make_new_columns(dataframe, columns, operation, new_names):
+    df = dataframe
+    # Make all new columns
+    for i in range(len(new_names)):
+        # amount of operations per new column
+        for j in range(len(operation[i])):
+            # apply the logical operators on the column step by step
+            if j == 0:
+                df[new_names[i]] = df.apply(lambda x: operations[operation[i][j]](x[columns[i][j]], x[columns[i][j+1]]), axis=1) # operation is a dict of possible operators
+            else:
+                df[new_names[i]] = df.apply(lambda x: operations[operation[i][j]](x[new_names[i]], x[columns[i][j+1]]), axis=1)
+
+    return df
