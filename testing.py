@@ -13,78 +13,48 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                             ['Insurer  9', 'non-life insurer', 9000,     0,         8800,          200,         200],
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
-
 # miner = data_patterns.PatternMiner(df)
-# df_patterns = miner.find({'name'      : 'sum pattern',
-#                           'pattern'   : 'sum',
-#                           'parameters': {"min_confidence": 0.5,
-#                                          "min_support"   : 1,
-#                                          "sum_elements": 3}})
-# df_patterns = miner.find({'pattern'   : ['=','>'],
-#                           'values'     : ['life insurer','TV-nonlife'],
-#                           'P_columns'  : ['Type'],
-#                           'Q_columns'  : ['TV-life'],
-#                           'both_ways' : False,
-#                           'parameters': {"min_confidence": 0.4,
-#                                          "min_support"   : 1}})
-
-df = data_patterns.make_new_columns(df, columns = [['Assets', 'TV-life'],["Assets",'Own funds','Excess']],
-                                                operation = [['+'], ['+','*']],
-                                                new_names = ['test1','test2'])
-print(df)
-miner = data_patterns.PatternMiner(df)
-
-df_patterns = miner.find({'pattern'   :[ ['=','>'],['>','>']],
-                          'values'     : [['non-life insurer',500], [ 300, 210]],
-                          'P_columns'  : ['Type', 'Assets'],
-                          'Q_columns'  : [ 'Own funds','Excess'],
-                          'P_logics' : ['and'],
-                          'Q_logics' : ['or'],
-                          'both_ways' : False,
-                          'parameters': {"min_confidence": 0.0,
-                                         "min_support"   : 1}})
-print(df_patterns.iloc[:,:12].to_string())
-# df_patterns = miner.find({'name'      : 'higher than',
-#                           'pattern'   : '>',
-#                           'value'     : 1000,
-#
-#                           'parameters': {"min_confidence": 0.8,
-#                                          "min_support"   : 1}})
+# df_patterns = miner.find({'name'     : 'Pattern 1',
+#      'pattern'  : '-->',
+#      'P_columns': ['Type'],
+#      'Q_columns': ['Assets', 'TV-life', 'TV-nonlife', 'Own funds'],
+#      'encode'   : {'Assets'   : 'reported',
+#                   'TV-life'   : 'reported',
+#                   'TV-nonlife': 'reported',
+#                   'Own funds' : 'reported'}})
 #
 # print(df_patterns.iloc[:,:12].to_string())
-
-# #
-# data_path = r"C:\Users\jan_h_000\Documents\DNB\Python"
-# xls = pd.ExcelFile(data_path + r"\Data individual insurers (year).xlsx")\
-#
-# def get_sheet(num):
-#     # read entire Excel sheet
-#     df = xls.parse(num)
-#     # columns names to lower case
-#     df.columns = map(str.lower, df.columns)
-#     # set index to name and period
-#     df.set_index(['relatienaam', 'periode'], inplace = True)
-#     # data cleaning (the excel sheet contains some
-#                     # additional data that we don't need)
-#     drop_list = [i for i in df.columns
-#                      if 'unnamed' in i or 'selectielijst' in i]
-#     df.drop(drop_list, axis = 1, inplace = True)
-#     # pivot data frame
-#     if "row_name" in df.columns:
-#         df.drop("row_name", axis = 1, inplace = True)
-#         df = df.pivot(columns = 'row_header')
-#     if df.columns.nlevels > 1:
-#         df.columns = [str(df.columns[i]) for i in
-#                           range(len(df.columns))]
-#     return df
-# df1 = get_sheet(14)
-# df2 = get_sheet(18)
-# df2.columns = [str(df2.columns[i]) for i in range(len(df2.columns))]
-# miner = data_patterns.PatternMiner(df1)
-#
-# df_patterns = miner.find({'name'      : 'sum pattern',
-#                           'pattern'   : 'sum',
+# print(df_patterns.loc[0,'pandas ex'])
+miner = data_patterns.PatternMiner(df)
+# df_patterns = miner.find({'name'      : 'equal values',
+#                           'pattern'   : '=',
 #                           'parameters': {"min_confidence": 0.5,
+#                                          "min_support"   : 2}})
+# df_patterns = miner.find({'pattern'   : ['<','>'],
+#                           'values'     : [8000,0],
+#                           'P_columns'  : ['Assets'],
+#                           'Q_columns'  : ['TV-life'],
+#                           'parameters': {"min_confidence": 0.4,
 #                                          "min_support"   : 1,
-#                                          "sum_elements": 3}})
-# print(df_patterns[['P columns','Q columns', 'support','exceptions']])
+#                                         'both_ways' : True}})
+
+# df = data_patterns.make_new_columns(df, columns = [['Assets', 'TV-life'],["Assets",'Own funds','Excess']],
+#                                                 operation = [['+'], ['+','*']],
+#                                                 new_names = ['test1','test2'])
+# #print(df)
+# miner = data_patterns.PatternMiner(df)
+# print(df_patterns.iloc[:,:12].to_string())
+# print(df_patterns.loc[0,'pandas ex'])
+# print(df[((df["Assets"]<8000) & ~(df["TV-life"]>0)) | (~(df["Assets"]<8000) & ((df["TV-life"]>0)))])
+print(df[(df["Assets"]<9000) & ~((df["TV-life"]<df["TV-nonlife"]))])
+df_patterns = miner.find({'pattern'   : [['>','<'],['>','<']],
+                          'values'     : [[0,8000], [ 210, 1000]],
+                          'P_columns'  : ['TV-life', 'Assets'],
+                          'parameters': {"min_confidence": 0.0,
+                                         "min_support"   : 1,
+                                          'both_ways' : False,
+                                           'P_logics' : ['&'],
+                                           'Q_logics' : ['^']}})
+print(df_patterns.iloc[:,:12].to_string())
+print(df_patterns.loc[3,'pandas ex'])
+print(df[(df["TV-life"]>0)&(df["Assets"]<8000) & ~((df["Own funds"]>210)^(df["Excess"]<1000))])
