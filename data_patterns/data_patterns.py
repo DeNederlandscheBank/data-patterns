@@ -601,7 +601,7 @@ def patterns_compare_columns_complex(dataframe = None,
             co1_list.append(reduce(operators[patterns_P[i]], [data_array[P_columns[i], :], values_P[i]]))
 
     # Apply the logic operator on the truth tables in the right order
-    co1 =co1_list[0]
+    co1 = co1_list[0]
     for i in range(1, len(co1_list)):
         co1 = reduce(logicals[P_logics[i-1]], [co1, co1_list[i]])
 
@@ -614,7 +614,7 @@ def patterns_compare_columns_complex(dataframe = None,
             else:
                 co2_list.append(reduce(operators[patterns_Q[i]], [data_array[combi[i], :], values_Q[i]]))
 
-        co2 =co2_list[0] # apply logic operators
+        co2 = co2_list[0] # apply logic operators
         for i in range(1, len(co2_list)):
             co2 = reduce(logicals[Q_logics[i-1]], [co2, co2_list[i]])
 
@@ -1105,6 +1105,7 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
                     expr = "df[" + condition_P + " & (" + condition_Q + ")]"
 
     elif pattern[1] != '-->':
+        # these are the quantitative rules
         if pattern[1]=="=":
             expr = 'df[(abs((df["' + str(column_P[0]) + '"]'
             for p_item in column_P[1:]:
@@ -1161,9 +1162,11 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
             else:
                 expr += ")" + string_pattern + ' ' + str(column_Q) + ']'
     else:
-        # if condition
+        # here we generate the string for the association rule ('-->')
+        # if-condition of the association rule
         condition_P = ""
         for idx, cond in enumerate(column_P):
+            # here we should put operator_p (now it is by default ==)
             equal_str = "=="
             if type(value_P[idx]) == str:
                 r_string = '"' + str(value_P[idx]) + '"'
@@ -1173,17 +1176,19 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
                 r_string = 'isnull()'
                 equal_str = "."
 
-
             if column_P[idx] in encode.keys():
                 condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df["' + str(column_P[idx]) + '"])'+ equal_str + r_string + ")"
             else:
                 condition_P = condition_P + '(df["' + str(column_P[idx]) + '"]' + equal_str + r_string + ")"
 
             if cond != column_P[-1]:
+                # here we should put p_logics (now it is by default &)
                 condition_P = condition_P + ' & '
 
+        # then part of the association rule
         condition_Q = ""
         for idx, cond in enumerate(column_Q):
+            # here we should put operator_q (now it is by default ==)
             equal_str = "=="
             if type(value_Q[idx]) == str:
                 r_string = '"' + str(value_Q[idx]) + '"'
@@ -1199,8 +1204,10 @@ def to_pandas_expression(pattern, encode, result_type, parameters):
                 condition_Q = condition_Q + '(df["' + str(column_Q[idx]) + '"]' + equal_str + r_string + ")"
 
             if cond != column_Q[-1]:
+                # here we should put q_logics (now it is by default &)
                 condition_Q = condition_Q + ' & '
 
+        # now we combine the if and the then part
         if result_type == False:
             expr = "df[" + condition_P + " & ~(" + condition_Q + ")]"
         else:
