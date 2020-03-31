@@ -369,9 +369,44 @@ def derive_patterns_from_metapattern(dataframe = None,
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
     encode = metapattern.get(ENCODE, {})
-    P_columns = sorted(metapattern["P_columns"])
-    Q_columns = sorted(metapattern["Q_columns"])
+    P_columns = metapattern.get("P_columns", None)
+    Q_columns = metapattern.get("Q_columns", None)
+    P_values = metapattern.get("P_values", None)
+    Q_values = metapattern.get("Q_values", None)
+    P_operators = metapattern.get("P_operators", "-->")
+    Q_operators = metapattern.get("Q_operators", "-->")
+
     confidence, support = get_parameters(parameters)
+
+    # Booleans so that we know if P and Q values are given or not
+    bool_P = False
+    if P_values is None:
+        bool_P = True
+    bool_Q = False
+    if Q_values is None:
+        bool_Q = True
+
+    # Making default P and Q operators in case they are not given and default logic operators
+    if P_operators != '-->' or Q_operators != '-->':
+        if P_operators != '-->':
+            if Q_operators == '-->': # make default Q operator
+                Q_operators = []
+                for i in range(len(Q_columns)):
+                    Q_operators.append('=')
+        if P_logics not in parameters: # Make default Logic operator
+            parameters['P_logics'] = []
+            for i in range(len(P_columns) - 1):
+                parameters['P_logics'].append('&')
+        if Q_operators != '-->':
+            if P_operators == '-->':# make default P operator
+                P_operators = []
+                for i in range(len(P_columns)):
+                    P_operators.append('=')
+        if Q_logics not in parameters: # Make default Q logic operators
+            parameters['Q_logics'] = []
+            for i in range(len(Q_columns) - 1):
+                parameters['Q_logics'].append('&')
+
     # adding index levels to columns (in case the pattern contains index elements)
     for level in range(len(dataframe.index.names)):
         dataframe[dataframe.index.names[level]] = dataframe.index.get_level_values(level = level)
@@ -386,15 +421,35 @@ def derive_patterns_from_metapattern(dataframe = None,
                 df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
     df_potential_patterns = df_features.drop_duplicates() # these are all unique combinations, i.e. the potential rules
     patterns = list()
-    for idx in range(len(df_potential_patterns.index)):
-        P_values = list(df_potential_patterns[P_columns].values[idx])
-        Q_values = list(df_potential_patterns[Q_columns].values[idx])
-        pattern = [P_columns, "-->", Q_columns, P_values, "-->", Q_values]
+
+    # In the case of Q or P values not given, we can use the old code
+    if bool_P or bool_Q:
+        for idx in range(len(df_potential_patterns.index)):
+            if bool_P: # only use when P value is not given
+                P_values = list(df_potential_patterns[P_columns].values[idx])
+            if bool_Q:# only use when Q value is not given
+                Q_values = list(df_potential_patterns[Q_columns].values[idx])
+            pattern = [P_columns, P_operators, Q_columns, P_values, Q_operators, Q_values]
+            pandas_co = to_pandas_expression(pattern, encode, True, parameters)
+            pandas_ex = to_pandas_expression(pattern, encode, False, parameters)
+            n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
+            n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
+            conf = np.round(n_co / (n_co + n_ex), 4)
+
+            if ((conf >= confidence) and (n_co >= support)):
+                xbrl_co = to_xbrl_expression(pattern, encode, True, parameters)
+                xbrl_ex = to_xbrl_expression(pattern, encode, False, parameters)
+                patterns.append([[name, 0], pattern, [n_co, n_ex, conf], pandas_co, pandas_ex, xbrl_co, xbrl_ex])
+
+    # In the case that P and Q values are both given, we only want to compute it for these values and not search for other values like above
+    else:
+        pattern = [P_columns, P_operators, Q_columns, P_values, Q_operators, Q_values]
         pandas_co = to_pandas_expression(pattern, encode, True, parameters)
         pandas_ex = to_pandas_expression(pattern, encode, False, parameters)
         n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
         n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
         conf = np.round(n_co / (n_co + n_ex), 4)
+
         if ((conf >= confidence) and (n_co >= support)):
             xbrl_co = to_xbrl_expression(pattern, encode, True, parameters)
             xbrl_ex = to_xbrl_expression(pattern, encode, False, parameters)
@@ -774,8 +829,7 @@ def derive_quantitative_patterns(metapattern  = None,
     P_columns = metapattern.get("P_columns", None)
     Q_columns = metapattern.get("Q_columns", None)
     value = metapattern.get("value", None)
-    parameters = metapattern.get("parameters", None)
-    values = metapattern.get("values", None)
+
 
     # if P_dataframe and Q_dataframe are given then join the dataframes and select columns
     if (P_dataframe is not None) and (Q_dataframe is not None):

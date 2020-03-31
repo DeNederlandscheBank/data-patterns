@@ -13,48 +13,47 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                             ['Insurer  9', 'non-life insurer', 9000,     0,         8800,          200,         200],
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
-# miner = data_patterns.PatternMiner(df)
-# df_patterns = miner.find({'name'     : 'Pattern 1',
-#      'pattern'  : '-->',
-#      'P_columns': ['Type'],
-#      'Q_columns': ['Assets', 'TV-life', 'TV-nonlife', 'Own funds'],
-#      'encode'   : {'Assets'   : 'reported',
-#                   'TV-life'   : 'reported',
-#                   'TV-nonlife': 'reported',
-#                   'Own funds' : 'reported'}})
-#
-# print(df_patterns.iloc[:,:12].to_string())
-# print(df_patterns.loc[0,'pandas ex'])
 miner = data_patterns.PatternMiner(df)
-# df_patterns = miner.find({'name'      : 'equal values',
-#                           'pattern'   : '=',
-#                           'parameters': {"min_confidence": 0.5,
-#                                          "min_support"   : 2}})
-# df_patterns = miner.find({'pattern'   : ['<','>'],
-#                           'values'     : [8000,0],
-#                           'P_columns'  : ['Assets'],
-#                           'Q_columns'  : ['TV-life'],
-#                           'parameters': {"min_confidence": 0.4,
-#                                          "min_support"   : 1,
-#                                         'both_ways' : True}})
+df_patterns = miner.find({'name'     : 'Pattern 1',
+     'pattern'  : '-->',
+     'P_columns': ['TV-life'],
+     'P_values' :[0],
+     'Q_values':[8800,200], # Logics and operators are not working yet.
+     'Q_columns': ['TV-nonlife', 'Own funds'],
+     'parameters' : {"min_confidence" : 0, "min_support" : 1}} )
 
-# df = data_patterns.make_new_columns(df, columns = [['Assets', 'TV-life'],["Assets",'Own funds','Excess']],
-#                                                 operation = [['+'], ['+','*']],
-#                                                 new_names = ['test1','test2'])
-# #print(df)
-# miner = data_patterns.PatternMiner(df)
-# print(df_patterns.iloc[:,:12].to_string())
-# print(df_patterns.loc[0,'pandas ex'])
-# print(df[((df["Assets"]<8000) & ~(df["TV-life"]>0)) | (~(df["Assets"]<8000) & ((df["TV-life"]>0)))])
-print(df[(df["Assets"]<9000) & ~((df["TV-life"]<df["TV-nonlife"]))])
-df_patterns = miner.find({'pattern'   : [['>','<'],['>','<']],
-                          'values'     : [[0,8000], [ 210, 1000]],
-                          'P_columns'  : ['TV-life', 'Assets'],
-                          'parameters': {"min_confidence": 0.0,
-                                         "min_support"   : 1,
-                                          'both_ways' : False,
-                                           'P_logics' : ['&'],
-                                           'Q_logics' : ['^']}})
 print(df_patterns.iloc[:,:12].to_string())
-print(df_patterns.loc[3,'pandas ex'])
-print(df[(df["TV-life"]>0)&(df["Assets"]<8000) & ~((df["Own funds"]>210)^(df["Excess"]<1000))])
+print(df_patterns.loc[0,'pandas ex'])
+# miner = data_patterns.PatternMiner(df)
+# # df_patterns = miner.find({'name'      : 'equal values',
+# #                           'pattern'   : '=',
+# #                           'parameters': {"min_confidence": 0.5,
+# #                                          "min_support"   : 2}})
+# # df_patterns = miner.find({'pattern'   : ['<','>'],
+# #                           'values'     : [8000,0],
+# #                           'P_columns'  : ['Assets'],
+# #                           'Q_columns'  : ['TV-life'],
+# #                           'parameters': {"min_confidence": 0.4,
+# #                                          "min_support"   : 1,
+# #                                         'both_ways' : True}})
+#
+# # df = data_patterns.make_new_columns(df, columns = [['Assets', 'TV-life'],["Assets",'Own funds','Excess']],
+# #                                                 operation = [['+'], ['+','*']],
+# #                                                 new_names = ['test1','test2'])
+# # #print(df)
+# # miner = data_patterns.PatternMiner(df)
+# # print(df_patterns.iloc[:,:12].to_string())
+# # print(df_patterns.loc[0,'pandas ex'])
+# # print(df[((df["Assets"]<8000) & ~(df["TV-life"]>0)) | (~(df["Assets"]<8000) & ((df["TV-life"]>0)))])
+# print(df[(df["Assets"]<9000) & ~((df["TV-life"]<df["TV-nonlife"]))])
+# df_patterns = miner.find({'pattern'   : [['>','<'],['>','<']],
+#                           'values'     : [[0,8000], [ 210, 1000]],
+#                           'P_columns'  : ['TV-life', 'Assets'],
+#                           'parameters': {"min_confidence": 0.0,
+#                                          "min_support"   : 1,
+#                                           'both_ways' : False,
+#                                            'P_logics' : ['&'],
+#                                            'Q_logics' : ['^']}})
+# print(df_patterns.iloc[:,:12].to_string())
+# print(df_patterns.loc[3,'pandas ex'])
+# print(df[(df["TV-life"]>0)&(df["Assets"]<8000) & ~((df["Own funds"]>210)^(df["Excess"]<1000))])
