@@ -46,7 +46,7 @@ class PatternDataFrame(pd.DataFrame):
         if not self.empty:
             df = super(PatternDataFrame, self).copy()
             # make sure that the '='-sign is read properly by Excel
-            df[RELATION_TYPE] = "'" + df[RELATION_TYPE]
+            #df[RELATION_TYPE] = "'" + df[RELATION_TYPE]
             df.to_excel(writer, 
                         sheet_name = sheet_name, 
                         merge_cells = False, *args, **kwargs)

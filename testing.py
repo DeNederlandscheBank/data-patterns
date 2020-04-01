@@ -17,11 +17,13 @@ miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find({'name'     : 'Pattern 1',
      'pattern'  : '-->',
      'P_columns': ['TV-life'],
-     'P_values' :[0],
-     'Q_values':[8800,200], # Logics and operators are not working yet.
+     'P_values' : [0],
+     'Q_values' : [8800,200],
      'Q_columns': ['TV-nonlife', 'Own funds'],
-     'parameters' : {"min_confidence" : 0, "min_support" : 1}} )
-
+     'parameters' : {"min_confidence" : 0, "min_support" : 1,
+                     'Q_operators':['>', '>'],
+                     'Q_logics'  : ['|']}} ) 
+df_patterns
 print(df_patterns.iloc[:,:12].to_string())
 print(df_patterns.loc[0,'pandas ex'])
 # miner = data_patterns.PatternMiner(df)

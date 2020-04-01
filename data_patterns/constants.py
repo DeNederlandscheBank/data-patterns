@@ -7,12 +7,13 @@ __version__ = '0.1.13'
 
 PATTERN_ID       	   		= "pattern_id"
 CLUSTER          	   		= "cluster"
-P_COLUMNS        	   		= "P columns"
-RELATION_TYPE    	   		= "relation type"
-Q_COLUMNS        	   		= "Q columns"
-P_PART           	   		= "P"
-RELATION         	   		= "relation"
-Q_PART           	   		= "Q"
+PATTERN_DEF					= "pattern_def"
+# P_COLUMNS        	   		= "P columns"
+# RELATION_TYPE    	   		= "relation type"
+# Q_COLUMNS        	   		= "Q columns"
+# P_PART           	   		= "P"
+# RELATION         	   		= "relation"
+# Q_PART           	   		= "Q"
 SUPPORT          	   		= "support"
 EXCEPTIONS       	   		= "exceptions"
 CONFIDENCE       	   		= "confidence"
@@ -39,8 +40,9 @@ SHEET_NAME_POST_CO     		= "_co"
 SHEET_NAME_POST_EX     		= "_ex"
 
 PATTERNS_COLUMNS 	   		= [PATTERN_ID, CLUSTER, 
-					  		   P_COLUMNS, RELATION_TYPE, Q_COLUMNS, P_PART, RELATION, Q_PART, 
+					  		   PATTERN_DEF, 
                     	  	   SUPPORT, EXCEPTIONS, CONFIDENCE, PATTERN_STATUS, ENCODINGS, PANDAS_CO, PANDAS_EX, XBRL_CO, XBRL_EX]
      
 RESULTS_COLUMNS        		= [RESULT_TYPE, PATTERN_ID, CLUSTER, INDEX, SUPPORT, EXCEPTIONS, CONFIDENCE, 
-                    	  	   P_COLUMNS, RELATION_TYPE, Q_COLUMNS, P_PART, RELATION, Q_PART, P_VALUES, Q_VALUES]
+                    	  	   PATTERN_DEF, 
+                    	  	   P_VALUES, Q_VALUES]
