@@ -16,46 +16,44 @@ df.set_index('Name', inplace = True)
 miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find({'name'     : 'Pattern 1',
      'pattern'  : '-->',
-     'P_columns': ['TV-life'],
-     'P_values' : [0],
-     'Q_values' : [8800,200],
+     'P_columns': ['TV-life', 'Assets'],
+     'P_values' : [100, 'Excess'],
+     'Q_values' : [0,0],
      'Q_columns': ['TV-nonlife', 'Own funds'],
-     'parameters' : {"min_confidence" : 0, "min_support" : 1,
-                     'Q_operators':['>', '>'],
-                     'Q_logics'  : ['|']}} ) 
-df_patterns
-print(df_patterns.iloc[:,:12].to_string())
+     'parameters' : {"min_confidence" : 0, "min_support" : 1, 'Q_operators': ['>', '>'],
+     'P_operators':['<','>'], 'Q_logics':['&'], 'both_ways':False}} )
+
+print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas ex'])
-# miner = data_patterns.PatternMiner(df)
-# # df_patterns = miner.find({'name'      : 'equal values',
-# #                           'pattern'   : '=',
-# #                           'parameters': {"min_confidence": 0.5,
-# #                                          "min_support"   : 2}})
-# # df_patterns = miner.find({'pattern'   : ['<','>'],
-# #                           'values'     : [8000,0],
-# #                           'P_columns'  : ['Assets'],
-# #                           'Q_columns'  : ['TV-life'],
-# #                           'parameters': {"min_confidence": 0.4,
-# #                                          "min_support"   : 1,
-# #                                         'both_ways' : True}})
-#
-# # df = data_patterns.make_new_columns(df, columns = [['Assets', 'TV-life'],["Assets",'Own funds','Excess']],
-# #                                                 operation = [['+'], ['+','*']],
-# #                                                 new_names = ['test1','test2'])
-# # #print(df)
-# # miner = data_patterns.PatternMiner(df)
-# # print(df_patterns.iloc[:,:12].to_string())
-# # print(df_patterns.loc[0,'pandas ex'])
-# # print(df[((df["Assets"]<8000) & ~(df["TV-life"]>0)) | (~(df["Assets"]<8000) & ((df["TV-life"]>0)))])
-# print(df[(df["Assets"]<9000) & ~((df["TV-life"]<df["TV-nonlife"]))])
-# df_patterns = miner.find({'pattern'   : [['>','<'],['>','<']],
-#                           'values'     : [[0,8000], [ 210, 1000]],
-#                           'P_columns'  : ['TV-life', 'Assets'],
-#                           'parameters': {"min_confidence": 0.0,
-#                                          "min_support"   : 1,
-#                                           'both_ways' : False,
-#                                            'P_logics' : ['&'],
-#                                            'Q_logics' : ['^']}})
-# print(df_patterns.iloc[:,:12].to_string())
-# print(df_patterns.loc[3,'pandas ex'])
-# print(df[(df["TV-life"]>0)&(df["Assets"]<8000) & ~((df["Own funds"]>210)^(df["Excess"]<1000))])
+
+miner = data_patterns.PatternMiner(df)
+df_patterns = miner.find({'name'     : 'Pattern 1',
+     'pattern'  : '-->',
+     'P_columns': ['Assets'],
+     'P_values' : [0],
+     'Q_columns': ['Type', 'TV-life', 'TV-nonlife', 'Own funds', 'Excess'],
+     'parameters' : {"min_confidence" : 0, "min_support" : 1,
+     'P_operators':['>']}} )
+
+print(df_patterns.to_string())
+print(df_patterns.loc[0,'pandas co'])
+
+miner = data_patterns.PatternMiner(df)
+
+df_patterns = miner.find({'name'      : 'equal values',
+                          'pattern'   : '>',
+                          'value' : 0,
+                          'parameters': {"min_confidence": 0.5,
+                                         "min_support"   : 2,
+                                         "decimal"       : 0}})
+print(df_patterns.to_string())
+print(df_patterns.loc[0,'pandas co'])
+
+miner = data_patterns.PatternMiner(df)
+df_patterns = miner.find({'name'      : 'sum pattern',
+                          'pattern'   : 'sum',
+                          'parameters': {"min_confidence": 0.5,
+                                         "min_support"   : 1}})
+
+print(df_patterns.to_string())
+print(df_patterns.loc[0,'pandas co'])
