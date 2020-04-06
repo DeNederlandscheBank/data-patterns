@@ -146,18 +146,48 @@ def derive_patterns(dataframe   = None,
     '''
     df_patterns = pd.DataFrame(columns = PATTERNS_COLUMNS)
     for metapattern in metapatterns:
-        if metapattern.get("pattern", "-->") == "-->":
+        if "pattern_string" in metapattern.keys():
+            patterns = derive_patterns_from_string(pattern = metapattern.get("pattern_string", ""),
+                                                   metapattern = metapattern,
+                                                   dataframe = dataframe)
+        elif metapattern.get("pattern", "-->") == "-->":
+
             patterns = derive_conditional_patterns(metapattern = metapattern,
                                                    dataframe = dataframe)
         else:
             patterns = derive_single_patterns(metapattern = metapattern,
-                                                    dataframe = dataframe)
+                                              dataframe = dataframe)
         df_patterns = df_patterns.append(patterns, ignore_index = True)
+
     df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
     df_patterns[SUPPORT] = df_patterns[SUPPORT].astype(np.int64)
     df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
     df_patterns.index.name = 'index'
     return PatternDataFrame(df_patterns)
+
+def derive_patterns_from_expression(pattern = "",
+                                    metapattern = None,
+                                    dataframe = None):
+    """
+    """
+    parameters = metapattern.get("parameters", {})
+    name = metapattern.get('name', "No name")
+    encode = metapattern.get(ENCODE, {})
+    encodings = get_encodings()
+    confidence, support = get_parameters(parameters)
+
+    patterns = list()
+
+    co_str, ex_str = to_pandas_expressions(pattern, encode, parameters, dataframe)
+    n_co = len(eval(co_str, encodings, {'df': dataframe}).index)
+    n_ex = len(eval(ex_str, encodings, {'df': dataframe}).index)
+    conf = np.round(n_co / (n_co + n_ex), 4)
+    if ((conf >= confidence) and (n_co >= support)):
+        xbrl_co = to_xbrl_expression(pattern, encode, True, parameters)
+        xbrl_ex = to_xbrl_expression(pattern, encode, False, parameters)
+        patterns.append([[name, 0], pattern, [n_co, n_ex, conf], co_str, ex_str, xbrl_co, xbrl_ex])
+
+    return patterns
 
 def derive_conditional_patterns(metapattern = None,
                                 dataframe = None):
@@ -382,17 +412,10 @@ def derive_patterns_from_metapattern(dataframe = None,
 
     confidence, support = get_parameters(parameters)
 
-    # Booleans so that we know if P and Q values are given or not
-    bool_P = False
-    if P_values is None:
-        bool_P = True
-    bool_Q = False
-    if Q_values is None:
-        bool_Q = True
-
     # adding index levels to columns (in case the pattern contains index elements)
     for level in range(len(dataframe.index.names)):
         dataframe[dataframe.index.names[level]] = dataframe.index.get_level_values(level = level)
+
     # derive df_feature list from P and Q (we use a copy, so we can change values for encodings)
     df_features = dataframe[P_columns + Q_columns].copy()
     # execute dynamic encoding functions
@@ -426,8 +449,6 @@ def derive_patterns_from_metapattern(dataframe = None,
             else: # numerical value
                 pattern += ' ' + Q_logics[idx] + ' ({"' + str(Q_columns[idx+1]) + '"} ' + Q_operators[idx+1] + ' ' + str(Q_values[idx+1]) + ')'
 
-        pattern_def = pattern
-
         if both_ways:
             pattern += " AND IF "
             if isinstance(P_values[0], str):
@@ -450,12 +471,20 @@ def derive_patterns_from_metapattern(dataframe = None,
                 else: # numerical value
                     pattern += ' ' + Q_logics[idx] + ' ({"' + str(Q_columns[idx+1]) + '"} ' + Q_operators[idx+1] + ' ' + str(Q_values[idx+1]) + ')'
 
-        return pattern, pattern_def
+        return pattern
+
+    # Booleans so that we know if P and Q values are given or not
+    bool_P = False
+    if P_values is None:
+        bool_P = True
+    bool_Q = False
+    if Q_values is None:
+        bool_Q = True
 
     # In the case of Q or P values not given, we can use the old code
     if bool_P or bool_Q:
         if bool_P and bool_Q:
-            df_potential_patterns = df_features.drop_duplicates(P_columns+Q_columns)
+            df_potential_patterns = df_features.drop_duplicates(P_columns + Q_columns)
         elif bool_P:
             df_potential_patterns = df_features.drop_duplicates(P_columns) # these are all unique combinations, i.e. the potential rules
         elif bool_Q:
@@ -465,28 +494,14 @@ def derive_patterns_from_metapattern(dataframe = None,
                 P_values = list(df_potential_patterns[P_columns].values[idx])
             if bool_Q:# only use when Q value is not given
                 Q_values = list(df_potential_patterns[Q_columns].values[idx])
-            pattern, pattern_def = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values)
-            pandas_co = to_pandas_expression(pattern_def, encode, True, parameters,dataframe)
-            pandas_ex = to_pandas_expression(pattern_def, encode, False, parameters,dataframe)
-            n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
-            n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
-            conf = np.round(n_co / (n_co + n_ex), 4)
-            if ((conf >= confidence) and (n_co >= support)):
-                xbrl_co = to_xbrl_expression(pattern_def, encode, True, parameters)
-                xbrl_ex = to_xbrl_expression(pattern_def, encode, False, parameters)
-                patterns.append([[name, 0], pattern, [n_co, n_ex, conf], pandas_co, pandas_ex, xbrl_co, xbrl_ex])
+            pattern = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values)
+            patterns.extend(derive_patterns_from_expression(pattern, metapattern, dataframe))
+
     # In the case that P and Q values are both given, we only want to compute it for these values and not search for other values like above
     else:
-        pattern, pattern_def = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values)
-        pandas_co = to_pandas_expression(pattern_def, encode, True, parameters,dataframe)
-        pandas_ex = to_pandas_expression(pattern_def, encode, False, parameters,dataframe)
-        n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
-        n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
-        conf = np.round(n_co / (n_co + n_ex), 4)
-        if ((conf >= confidence) and (n_co >= support)):
-            xbrl_co = to_xbrl_expression(pattern_def, encode, True, parameters)
-            xbrl_ex = to_xbrl_expression(pattern_def, encode, False, parameters)
-            patterns.append([[name, 0], pattern, [n_co, n_ex, conf], pandas_co, pandas_ex, xbrl_co, xbrl_ex])
+        pattern = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values)
+        patterns.extend(derive_patterns_from_expression(pattern, metapattern, dataframe))
+
     # deleting the levels of the index to the columns
     for level in range(len(dataframe.index.names)):
         del dataframe[dataframe.index.names[level]]
@@ -859,6 +874,7 @@ def evaluate_excel_string(s):
         return s
 
 def to_xbrl_expression(pattern, encode, result_type, parameters):
+    """Placeholder for XBRL"""
     return ""
 
 def extract_datapoints(pattern):
@@ -966,6 +982,12 @@ def expression2pandas(g):
     else:
         co_str = 'df[('+add_brackets(g)+')]'
         ex_str = 'df[~('+add_brackets(g)+')]'
+    return co_str, ex_str
+
+def to_pandas_expressions(pattern, encode, parameters, dataframe):
+    """Derive both confirmation and exceptions"""
+    co_str = to_pandas_expression(pattern, encode, True, parameters, dataframe)
+    ex_str = to_pandas_expression(pattern, encode, False, parameters, dataframe)
     return co_str, ex_str
 
 def to_pandas_expression(pattern, encode, result_type, parameters, dataframe):
