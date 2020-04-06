@@ -480,7 +480,6 @@ def derive_patterns_from_metapattern(dataframe = None,
         pattern, pattern_def = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values)
         pandas_co = to_pandas_expression(pattern_def, encode, True, parameters,dataframe)
         pandas_ex = to_pandas_expression(pattern_def, encode, False, parameters,dataframe)
-        print(pandas_co)
         n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
         n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
         conf = np.round(n_co / (n_co + n_ex), 4)
@@ -863,6 +862,9 @@ def to_xbrl_expression(pattern, encode, result_type, parameters):
     return ""
 
 def extract_datapoints(pattern):
+
+    # Jan: this function should be deleted
+
     '''This function extracts the datapoints (P/Q columns and P/Q values and operator)
     '''
     column_P = []
@@ -908,7 +910,6 @@ def extract_datapoints(pattern):
             condition = condition.replace('\'', '').split(' sum ')
             column_P = condition[0].split(' + ')
             column_Q = condition[1].split(' + ')
-
     else:
         for condition in re.findall(r'\((.*?)\)', pattern):
             items = re.search(statement_structure, condition)
@@ -923,12 +924,75 @@ def extract_datapoints(pattern):
                 column_Q.append(items[3])
     return column_P, value_P, column_Q, value_Q, pattern_operator
 
+def preprocess_pattern(pattern):
+    pattern = pattern.replace("=" , "==")
+    pattern = pattern.replace(">==" , ">=")
+    pattern = pattern.replace("<==" , "<=")
+    return pattern
+
+def datapoints2pandas(s, encode):
+    """Transform datapoints to Pandas datapoints
+    Examples:
+    {column_name} -> df[column_name]
+    {column_name} -> encoded(df[column_name]) where column_name is in encoding definitions
+    """
+    res = s
+    for item in re.findall(r'{(.*?)}', res):
+        if item[1:-1] in encode.keys():
+            res = res.replace("{"+item+"}", encode[item[1:-1]] + "(df["+item+"])")
+        else:
+            res = res.replace("{"+item+"}", "df["+item+"]")
+    return res
+
+def add_brackets(s):
+    """Add brackets around expressions with & and |
+    """
+    item = re.search(r'(.*)([&|\|])(.*)', s) # & and | takes priority over other functions like ==
+    if item is not None:
+        return '('+add_brackets(item.group(1))+') '+item.group(2).strip()+' ('+add_brackets(item.group(3))+')'
+    else:
+        item = re.search(r'(.*)([>|<|!=|<=|>=|==])(.*)', s)
+        if item is not None:
+            return add_brackets(item.group(1)) + item.group(2).strip() + add_brackets(item.group(3))
+        else:
+            return s.strip()
+
+def expression2pandas(g):
+    """Transform conditional expression to Pandas code"""
+    item = re.search(r'IF(.*)THEN(.*)', g)
+    if item is not None:
+        co_str = 'df[('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")]"
+        ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
+    else:
+        co_str = 'df[('+add_brackets(g)+')]'
+        ex_str = 'df[~('+add_brackets(g)+')]'
+    return co_str, ex_str
+
 def to_pandas_expression(pattern, encode, result_type, parameters, dataframe):
+    '''Generate pandas code from the pattern definition string
     '''
-    '''
-    # here we derive the datapoints from the pattern
-    column_P, value_P, column_Q, value_Q, pattern_operator = extract_datapoints(pattern)
-    if pattern_operator != '-->':
+    if re.search(r'IF(.*)THEN(.*)', pattern) is None: 
+
+        # single condition expressions
+
+        # preprocessing step    
+        res = preprocess_pattern(pattern)   
+        # datapoints to pandas, i.e. {column} -> df[column]
+        res = datapoints2pandas(res, encode)
+        # expression to pandas, i.e. IF X=x THEN Y=y -> df[df[X]=x & df[Y]=y] for confirmations
+        co_str, ex_str = expression2pandas(res)
+        if result_type == False:
+            res = ex_str
+        else:
+            res = co_str
+        print("String from new method: " + res)
+
+        # now res is the generated string, it should be equal to the code below that generates expr
+        # Jan: this does not yet work for ==. It should generate a string like abs(X - Y) < 1e-8, like below
+        # and the functions do not yet look for result_type==False
+        
+        # here we derive the datapoints from the pattern
+        column_P, value_P, column_Q, value_Q, pattern_operator = extract_datapoints(pattern)
         # these are the single rules
         if pattern_operator == "=":
             expr = 'df[(abs((df[' + str(column_P[0]) + ']'
@@ -986,79 +1050,97 @@ def to_pandas_expression(pattern, encode, result_type, parameters, dataframe):
             else:
                 expr += ")" + string_pattern + str(column_Q[0]) + ']'
     else:
-        P_operators = parameters.get("P_operators", ['='] * len(column_P))
-        # operators between Q_column and Q_value, default is =
-        Q_operators = parameters.get("Q_operators", ['='] * len(column_Q))
-        # logical operators between P expressions, default is &
-        P_logics = parameters.get("P_logics", ['&'] * (len(column_P) - 1))
-        # logical operators between Q expressions, default is &
-        Q_logics = parameters.get("Q_logics", ['&'] * (len(column_Q) - 1))
 
-        # Boolean that is set to True if we want to also look for patterns the other way around
-        both_ways = parameters.get("both_ways", False)
+        # conditional expressions
 
-        # here we generate the string for the conditional rule ('-->')
-        # if-condition of the conditional rule
-        condition_P = ""
-        for idx, cond in enumerate(column_P):
-            # here we put operator_p (now it is by default ==) (TODO change name of string)
-            if P_operators[idx]=='=':
-                equal_str = "=="
-            else:
-                equal_str = P_operators[idx]
-
-            if value_P[idx].replace('"','') in dataframe.columns:
-                r_string = 'df[' + value_P[idx] + ']'
-            else:
-                r_string = str(value_P[idx])
-            if r_string == 'nan':
-                r_string = 'isnull()'
-                equal_str = "."
-
-            if column_P[idx][1:-1] in encode.keys():
-                condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df[' + str(column_P[idx]) + '])'+ equal_str + r_string + ")"
-            else:
-                condition_P = condition_P + '(df[' + str(column_P[idx]) + ']' + equal_str + r_string + ")"
-
-            if cond != column_P[-1]:
-                # here we put p_logics (now it is by default &)
-                condition_P = condition_P + ' ' + P_logics[idx] + ' '
-        # then part of the conditional rule
-        condition_Q = ""
-        for idx, cond in enumerate(column_Q):
-            # here we put operator_q (now it is by default ==) (TODO: change name of string)
-            if Q_operators[idx]=='=':
-                equal_str = "=="
-            else:
-                equal_str = Q_operators[idx]
-            if value_Q[idx].replace('"','') in dataframe.columns:
-                r_string = 'df[' + value_Q[idx] + ']'
-            else:
-                r_string = str(value_Q[idx])
-            if r_string == 'nan':
-                r_string = 'isnull()'
-                equal_str = "."
-
-            if column_Q[idx][1:-1] in encode.keys():
-                condition_Q = condition_Q + '('+ encode[column_Q[idx][1:-1]]+ '(df[' + str(column_Q[idx]) + '])' + equal_str + r_string + ")"
-            else:
-                condition_Q = condition_Q + '(df[' + str(column_Q[idx]) + ']' + equal_str + r_string + ")"
-
-            if cond != column_Q[-1]:
-                # here we put q_logics (now it is by default &)
-                condition_Q = condition_Q + ' ' + Q_logics[idx] + ' '
-
-        # now we combine the if and the then part
+        # preprocessing step        
+        res = preprocess_pattern(pattern)   
+        # datapoints to pandas, i.e. {column} -> df[column]
+        res = datapoints2pandas(res, encode)
+        # expression to pandas, i.e. IF X=x THEN Y=y -> df[df[X]=x & df[Y]=y] for confirmations
+        co_str, ex_str = expression2pandas(res)
         if result_type == False:
-            if both_ways:
-                expr = "df[((" + condition_P + ") & ~(" + condition_Q + ")) | (~("+condition_P +")& ("+condition_Q+ "))]"
-            else:
-                expr = "df[(" + condition_P + ") & ~(" + condition_Q + ")]"
+            res = ex_str
         else:
-            if both_ways:
-                expr = "df[((" + condition_P + ") & (" + condition_Q + ")) | (~("+condition_P +") & ~("+condition_Q+ "))]"
-            else:
-                expr = "df[(" + condition_P + ") & (" + condition_Q + ")]"
+            res = co_str
+
+        # P_operators = parameters.get("P_operators", ['='] * len(column_P))
+        # # operators between Q_column and Q_value, default is =
+        # Q_operators = parameters.get("Q_operators", ['='] * len(column_Q))
+        # # logical operators between P expressions, default is &
+        # P_logics = parameters.get("P_logics", ['&'] * (len(column_P) - 1))
+        # # logical operators between Q expressions, default is &
+        # Q_logics = parameters.get("Q_logics", ['&'] * (len(column_Q) - 1))
+
+        # # Boolean that is set to True if we want to also look for patterns the other way around
+        # both_ways = parameters.get("both_ways", False)
+
+        # # here we generate the string for the conditional rule ('-->')
+        # # if-condition of the conditional rule
+        # condition_P = ""
+        # for idx, cond in enumerate(column_P):
+        #     # here we put operator_p (now it is by default ==) (TODO change name of string)
+        #     if P_operators[idx]=='=':
+        #         equal_str = "=="
+        #     else:
+        #         equal_str = P_operators[idx]
+
+        #     if value_P[idx].replace('"','') in dataframe.columns:
+        #         r_string = 'df[' + value_P[idx] + ']'
+        #     else:
+        #         r_string = str(value_P[idx])
+        #     if r_string == 'nan':
+        #         r_string = 'isnull()'
+        #         equal_str = "."
+
+        #     if column_P[idx][1:-1] in encode.keys():
+        #         condition_P = condition_P + '('+ encode[column_P[idx]]+ '(df[' + str(column_P[idx]) + '])'+ equal_str + r_string + ")"
+        #     else:
+        #         condition_P = condition_P + '(df[' + str(column_P[idx]) + ']' + equal_str + r_string + ")"
+
+        #     if cond != column_P[-1]:
+        #         # here we put p_logics (now it is by default &)
+        #         condition_P = condition_P + ' ' + P_logics[idx] + ' '
+        # # then part of the conditional rule
+        # condition_Q = ""
+        # for idx, cond in enumerate(column_Q):
+        #     # here we put operator_q (now it is by default ==) (TODO: change name of string)
+        #     if Q_operators[idx]=='=':
+        #         equal_str = "=="
+        #     else:
+        #         equal_str = Q_operators[idx]
+        #     if value_Q[idx].replace('"','') in dataframe.columns:
+        #         r_string = 'df[' + value_Q[idx] + ']'
+        #     else:
+        #         r_string = str(value_Q[idx])
+        #     if r_string == 'nan':
+        #         r_string = 'isnull()'
+        #         equal_str = "."
+
+        #     if column_Q[idx][1:-1] in encode.keys():
+        #         condition_Q = condition_Q + '('+ encode[column_Q[idx][1:-1]]+ '(df[' + str(column_Q[idx]) + '])' + equal_str + r_string + ")"
+        #     else:
+        #         condition_Q = condition_Q + '(df[' + str(column_Q[idx]) + ']' + equal_str + r_string + ")"
+
+        #     if cond != column_Q[-1]:
+        #         # here we put q_logics (now it is by default &)
+        #         condition_Q = condition_Q + ' ' + Q_logics[idx] + ' '
+
+        # # now we combine the if and the then part
+        # if result_type == False:
+        #     if both_ways:
+        #         expr = "df[((" + condition_P + ") & ~(" + condition_Q + ")) | (~("+condition_P +")& ("+condition_Q+ "))]"
+        #     else:
+        #         expr = "df[(" + condition_P + ") & ~(" + condition_Q + ")]"
+        # else:
+        #     if both_ways:
+        #         expr = "df[((" + condition_P + ") & (" + condition_Q + ")) | (~("+condition_P +") & ~("+condition_Q+ "))]"
+        #     else:
+        #         expr = "df[(" + condition_P + ") & (" + condition_Q + ")]"
+
+        expr = res
+
+    print(expr)
     return expr
 
 def find_redundant_patterns(df_patterns = None):
