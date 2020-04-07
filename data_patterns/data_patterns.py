@@ -397,7 +397,6 @@ def derive_patterns_from_metapattern(dataframe = None,
     Q_columns = metapattern.get("Q_columns", list(dataframe.columns.values))
     P_values = metapattern.get("P_values", None)
     Q_values = metapattern.get("Q_values", None)
-    print(Q_columns)
     # operators between P_column and P_value, default is =
     P_operators = parameters.get("P_operators", ['='] * len(P_columns))
     # operators between Q_column and Q_value, default is =
@@ -430,22 +429,22 @@ def derive_patterns_from_metapattern(dataframe = None,
     def generate_conditional_expression(P_columns, P_values, Q_columns, Q_values):
         pattern = "IF "
         if isinstance(P_values[0], str):
-            pattern += '({"' + str(P_columns[0]) + '"} ' + P_operators[0] + ' "'+ str(P_values[0]) + '")'
+            pattern += '({"' + str(P_columns[0]) + '"} ' + P_operators[0] + ' "'+ P_values[0] + '")'
         else: # numerical value
             pattern += '({"' + str(P_columns[0]) + '"} ' + P_operators[0] + ' ' + str(P_values[0]) + ')'
         for idx in range(len(P_columns[1:])):
             if isinstance(P_values[idx+1], str):
-                pattern += ' ' + P_logics[idx] + ' ({"' + str(P_columns[idx+1]) + '"} ' + P_operators[idx+1] + ' "'+ str(P_values[idx+1]) + '")'
+                pattern += ' ' + P_logics[idx] + ' ({"' + str(P_columns[idx+1]) + '"} ' + P_operators[idx+1] + ' "'+ P_values[idx+1] + '")'
             else: # numerical value
                 pattern += ' ' + P_logics[idx] + ' ({"' + str(P_columns[idx+1]) + '"} ' + P_operators[idx+1] + ' ' + str(P_values[idx+1]) + ')'
         pattern += " THEN "
         if isinstance(Q_values[0], str):
-            pattern += '({"' + str(Q_columns[0]) + '"} ' + Q_operators[0] + ' "' + str(Q_values[0]) + '")'
+            pattern += '({"' + str(Q_columns[0]) + '"} ' + Q_operators[0] + ' "' + Q_values[0] + '")'
         else: # numerical value
             pattern += '({"' + str(Q_columns[0]) + '"} ' + Q_operators[0] + ' ' + str(Q_values[0]) + ')'
         for idx in range(len(Q_columns[1:])):
             if isinstance(Q_values[idx+1], str):
-                pattern += ' ' + Q_logics[idx] + ' ({"' + str(Q_columns[idx+1]) + '"} ' + Q_operators[idx+1] + ' "' + str(Q_values[idx+1]) + '")'
+                pattern += ' ' + Q_logics[idx] + ' ({"' + str(Q_columns[idx+1]) + '"} ' + Q_operators[idx+1] + ' "' + Q_values[idx+1]+ '")'
             else: # numerical value
                 pattern += ' ' + Q_logics[idx] + ' ({"' + str(Q_columns[idx+1]) + '"} ' + Q_operators[idx+1] + ' ' + str(Q_values[idx+1]) + ')'
 
@@ -637,7 +636,7 @@ def patterns_column_column(dataframe  = None,
     preprocess_operator = preprocess[pattern]
     initial_data_array = dataframe.values.T
     # set up boolean masks for nonzero items per column
-    nonzero = initial_data_array != 0
+    nonzero = initial_data_array != None
     for c0 in P_columns:
         for c1 in Q_columns:
             if c0 != c1:
@@ -705,7 +704,7 @@ def patterns_sums_column(dataframe  = None,
                         pattern_def = '({"' + P_column[0] + '"}'
                         for idx in range(len(P_column[1:])):
                             pattern_def += ' + {"' + P_column[idx+1]+ '"}'
-                        pattern_def += ' sum {"' + Q_column[0] + '"})'
+                        pattern_def += ' = {"' + Q_column[0] + '"})'
                         pattern_data = [[pattern_name, 0],
                                         pattern_def,
                                         [co_sum, ex_sum, conf]]
@@ -877,68 +876,68 @@ def to_xbrl_expression(pattern, encode, result_type, parameters):
     """Placeholder for XBRL"""
     return ""
 
-def extract_datapoints(pattern):
-
-    # Jan: this function should be deleted
-
-    '''This function extracts the datapoints (P/Q columns and P/Q values and operator)
-    '''
-    column_P = []
-    column_Q = []
-    value_P = []
-    value_Q = []
-    statement_structure = r'(.*)( >= | = | <= | > | < | sum )(.*)'
-    item = re.search(r'IF(.*)THEN(.*)', pattern)
-    if item is not None: # conditional expression
-        if_part = item.group(1)
-        for condition in re.findall(r'\((.*?)\)', if_part):
-            items = re.search(statement_structure, condition)
-            if items[1][0] in '{':
-                column_P.append(items[1][1:-1])
-            else:
-                column_P.append(items[1])
-            if items[3][0] in '{':
-                value_P.append(items[3][1:-1])
-            else:
-                value_P.append(items[3])
-            pattern_operator = items[2].strip()
-        then_part = item.group(2)
-        for condition in re.findall(r'\((.*?)\)', then_part):
-            items = re.search(statement_structure, condition)
-            if items[1][0] in '{':
-                column_Q.append(items[1][1:-1])
-            else:
-                column_Q.append(items[1])
-            if items[3][0] in '{':
-                value_Q.append(items[3][1:-1])
-            else:
-                value_Q.append(items[3])
-            pattern_operator = items[2].strip()
-        pattern_operator = '-->'
-
-    elif re.search(r'sum', pattern):
-        sum_structure =  r'(.*)( + )(.*)'
-        for condition in re.findall(r'\((.*?)\)', pattern):
-            condition = condition.replace("{", "")
-            condition = condition.replace("}", "")
-            items = re.search(statement_structure, condition)
-            pattern_operator = items[2].strip()
-            condition = condition.replace('\'', '').split(' sum ')
-            column_P = condition[0].split(' + ')
-            column_Q = condition[1].split(' + ')
-    else:
-        for condition in re.findall(r'\((.*?)\)', pattern):
-            items = re.search(statement_structure, condition)
-            pattern_operator = items[2].strip()
-            if items[1][0]=='{':
-                column_P.append(items[1][1:-1])
-            else:
-                column_P.append(items[1])
-            if items[3][0]=='{':
-                column_Q.append(items[3][1:-1])
-            else:
-                column_Q.append(items[3])
-    return column_P, value_P, column_Q, value_Q, pattern_operator
+# def extract_datapoints(pattern):
+#
+#     # Jan: this function should be deleted
+#
+#     '''This function extracts the datapoints (P/Q columns and P/Q values and operator)
+#     '''
+#     column_P = []
+#     column_Q = []
+#     value_P = []
+#     value_Q = []
+#     statement_structure = r'(.*)( >= | = | <= | > | < | sum )(.*)'
+#     item = re.search(r'IF(.*)THEN(.*)', pattern)
+#     if item is not None: # conditional expression
+#         if_part = item.group(1)
+#         for condition in re.findall(r'\((.*?)\)', if_part):
+#             items = re.search(statement_structure, condition)
+#             if items[1][0] in '{':
+#                 column_P.append(items[1][1:-1])
+#             else:
+#                 column_P.append(items[1])
+#             if items[3][0] in '{':
+#                 value_P.append(items[3][1:-1])
+#             else:
+#                 value_P.append(items[3])
+#             pattern_operator = items[2].strip()
+#         then_part = item.group(2)
+#         for condition in re.findall(r'\((.*?)\)', then_part):
+#             items = re.search(statement_structure, condition)
+#             if items[1][0] in '{':
+#                 column_Q.append(items[1][1:-1])
+#             else:
+#                 column_Q.append(items[1])
+#             if items[3][0] in '{':
+#                 value_Q.append(items[3][1:-1])
+#             else:
+#                 value_Q.append(items[3])
+#             pattern_operator = items[2].strip()
+#         pattern_operator = '-->'
+#
+#     elif re.search(r'sum', pattern):
+#         sum_structure =  r'(.*)( + )(.*)'
+#         for condition in re.findall(r'\((.*?)\)', pattern):
+#             condition = condition.replace("{", "")
+#             condition = condition.replace("}", "")
+#             items = re.search(statement_structure, condition)
+#             pattern_operator = items[2].strip()
+#             condition = condition.replace('\'', '').split(' sum ')
+#             column_P = condition[0].split(' + ')
+#             column_Q = condition[1].split(' + ')
+#     else:
+#         for condition in re.findall(r'\((.*?)\)', pattern):
+#             items = re.search(statement_structure, condition)
+#             pattern_operator = items[2].strip()
+#             if items[1][0]=='{':
+#                 column_P.append(items[1][1:-1])
+#             else:
+#                 column_P.append(items[1])
+#             if items[3][0]=='{':
+#                 column_Q.append(items[3][1:-1])
+#             else:
+#                 column_Q.append(items[3])
+#     return column_P, value_P, column_Q, value_Q, pattern_operator
 
 def preprocess_pattern(pattern):
     pattern = pattern.replace("=" , "==")
@@ -952,15 +951,17 @@ def datapoints2pandas(s, encode):
     {column_name} -> df[column_name]
     {column_name} -> encoded(df[column_name]) where column_name is in encoding definitions
     """
+    nonzero_col = []
     res = s
     for item in re.findall(r'{(.*?)}', res):
         if item[1:-1] in encode.keys():
             res = res.replace("{"+item+"}", encode[item[1:-1]] + "(df["+item+"])")
         else:
             res = res.replace("{"+item+"}", "df["+item+"]")
-    return res
+        nonzero_col.append("df["+item+"]")
+    return res, nonzero_col
 
-def add_brackets(s):
+def add_brackets(s, decimal = 0):
     """Add brackets around expressions with & and |
     """
     item = re.search(r'(.*)([&|\|])(.*)', s) # & and | takes priority over other functions like ==
@@ -973,15 +974,34 @@ def add_brackets(s):
         else:
             return s.strip()
 
-def expression2pandas(g):
+def expression2pandas(g, nonzero_col, dec, both_ways, sum=False):
     """Transform conditional expression to Pandas code"""
     item = re.search(r'IF(.*)THEN(.*)', g)
     if item is not None:
-        co_str = 'df[('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")]"
-        ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
+        if both_ways:
+            item = re.search(r'(.*)AND(.*)', g)
+            item = re.search(r'IF(.*)THEN(.*)', item.group(1))
+            co_str = 'df[(('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")) | (~("+add_brackets(item.group(1)) +")& ~("+add_brackets(item.group(2))+ "))]"
+            ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+") | (~("+add_brackets(item.group(1)) +")& ("+add_brackets(item.group(2))+ "))]"
+        else:
+            co_str = 'df[('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")]"
+            ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
     else:
-        co_str = 'df[('+add_brackets(g)+')]'
-        ex_str = 'df[~('+add_brackets(g)+')]'
+        item = re.search(r'(.*)(==)(.*)', g)
+        if item is not None:
+            g_co = 'abs('+ item[1].strip() + '-' + item[3].strip() + ')<1.5e' + str(dec)
+            g_ex = 'abs(' + item[1].strip() + '-' + item[3].strip() + ')=>1.5e' + str(dec)
+            co_str = 'df[('+g_co+')&'
+            ex_str = 'df[('+g_ex+')&'
+            if sum:
+                for i in nonzero_col:
+                    co_str += '(' + i +'!=0)&'
+                    ex_str += '(' + i +'!=0)&'
+            co_str = co_str[:-1] + ']'
+            ex_str = ex_str[:-1] + ']'
+        else:
+            co_str = 'df[('+add_brackets(g)+')]'
+            ex_str = 'df[~('+add_brackets(g)+')]'
     return co_str, ex_str
 
 def to_pandas_expressions(pattern, encode, parameters, dataframe):
@@ -993,98 +1013,85 @@ def to_pandas_expressions(pattern, encode, parameters, dataframe):
 def to_pandas_expression(pattern, encode, result_type, parameters, dataframe):
     '''Generate pandas code from the pattern definition string
     '''
-    if re.search(r'IF(.*)THEN(.*)', pattern) is None: 
+    decimal = parameters.get("decimal", 0)
+    both_ways = parameters.get("both_ways", False)
 
-        # single condition expressions
+    sum = parameters.get("sum", False)
 
-        # preprocessing step    
-        res = preprocess_pattern(pattern)   
-        # datapoints to pandas, i.e. {column} -> df[column]
-        res = datapoints2pandas(res, encode)
-        # expression to pandas, i.e. IF X=x THEN Y=y -> df[df[X]=x & df[Y]=y] for confirmations
-        co_str, ex_str = expression2pandas(res)
-        if result_type == False:
-            res = ex_str
-        else:
-            res = co_str
-        print("String from new method: " + res)
-
+    # preprocessing step
+    res = preprocess_pattern(pattern)
+    # datapoints to pandas, i.e. {column} -> df[column]
+    res, nonzero_col = datapoints2pandas(res, encode)
+    # expression to pandas, i.e. IF X=x THEN Y=y -> df[df[X]=x & df[Y]=y] for confirmations
+    co_str, ex_str = expression2pandas(res, nonzero_col,decimal, both_ways, sum)
+    if result_type == False:
+        res = ex_str
+    else:
+        res = co_str
+    expr = res
+    return expr
         # now res is the generated string, it should be equal to the code below that generates expr
         # Jan: this does not yet work for ==. It should generate a string like abs(X - Y) < 1e-8, like below
         # and the functions do not yet look for result_type==False
-        
+
         # here we derive the datapoints from the pattern
-        column_P, value_P, column_Q, value_Q, pattern_operator = extract_datapoints(pattern)
-        # these are the single rules
-        if pattern_operator == "=":
-            expr = 'df[(abs((df[' + str(column_P[0]) + ']'
-            for p_item in column_P[1:]:
-                expr += '+ df[' + str(p_item) + ']'
-            if type(column_Q)==list:
-                expr += ')-df[' + str(column_Q[0]) + ']) '
-            else:
-                expr += ')-' + str(column_Q) + ' '
-
-            if result_type == True:
-                expr += '< 1.5e'+str(-parameters.get("decimal", 8))+')]'
-            else:
-                expr += '>= 1.5e'+str(-parameters.get("decimal", 8))+')]'
-        elif pattern_operator == "sum":
-            nonzero = '(df[' + str(column_P[0]) + ']!=0)'
-            for p_item in column_P[1:]:
-                nonzero = nonzero + ' & (df[' + str(p_item) + ']!=0)'
-            if type(column_Q)==list:
-                for q_item in column_Q:
-                    nonzero = nonzero + ' & (df[' + str(q_item) + ']!=0)'
-            else:
-                nonzero = nonzero + ' & (df[' + str(column_Q) + ']!=0)'
-
-            expr = 'df[(' + nonzero + ') & (abs((df[' + str(column_P[0]) + ']'
-            for p_item in column_P[1:]:
-                expr += '+df[' + str(p_item) + ']'
-            if type(column_Q)==list:
-                expr += ')-df[' + str(column_Q[0]) + ']) '
-            else:
-                expr += ')-' + str(column_Q) + ' '
-            if result_type == True:
-                expr += '< 1.5e'+str(-parameters.get("decimal", 0))+')]'
-            else:
-                expr += '>= 1.5e'+str(-parameters.get("decimal", 0))+')]'
-        else:
-            if result_type == True:
-                string_pattern = str(pattern_operator)
-            else:
-                if pattern_operator == "<":
-                    string_pattern = ">="
-                elif pattern_operator == "<=":
-                    string_pattern = ">"
-                elif pattern_operator == ">=":
-                    string_pattern = "<"
-                elif pattern_operator == ">":
-                    string_pattern = "<="
-                else:
-                    string_pattern = "UKNOWN"
-            expr = 'df[(df[' + str(column_P[0]) + ']'
-            for p_item in column_P[1:]:
-                expr += '+ df[' + str(p_item) + ']'
-            if column_Q[0]=='{':
-                expr += ")" + string_pattern + 'df[' + str(column_Q[0]) + ']]'
-            else:
-                expr += ")" + string_pattern + str(column_Q[0]) + ']'
-    else:
-
-        # conditional expressions
-
-        # preprocessing step        
-        res = preprocess_pattern(pattern)   
-        # datapoints to pandas, i.e. {column} -> df[column]
-        res = datapoints2pandas(res, encode)
-        # expression to pandas, i.e. IF X=x THEN Y=y -> df[df[X]=x & df[Y]=y] for confirmations
-        co_str, ex_str = expression2pandas(res)
-        if result_type == False:
-            res = ex_str
-        else:
-            res = co_str
+        # column_P, value_P, column_Q, value_Q, pattern_operator = extract_datapoints(pattern)
+        # # these are the single rules
+        # if pattern_operator == "=":
+        #     expr = 'df[(abs((df[' + str(column_P[0]) + ']'
+        #     for p_item in column_P[1:]:
+        #         expr += '+ df[' + str(p_item) + ']'
+        #     if type(column_Q)==list:
+        #         expr += ')-df[' + str(column_Q[0]) + ']) '
+        #     else:
+        #         expr += ')-' + str(column_Q) + ' '
+        #
+        #     if result_type == True:
+        #         expr += '< 1.5e'+str(-parameters.get("decimal", 8))+')]'
+        #     else:
+        #         expr += '>= 1.5e'+str(-parameters.get("decimal", 8))+')]'
+        # elif pattern_operator == "sum":
+        #     nonzero = '(df[' + str(column_P[0]) + ']!=0)'
+        #     for p_item in column_P[1:]:
+        #         nonzero = nonzero + ' & (df[' + str(p_item) + ']!=0)'
+        #     if type(column_Q)==list:
+        #         for q_item in column_Q:
+        #             nonzero = nonzero + ' & (df[' + str(q_item) + ']!=0)'
+        #     else:
+        #         nonzero = nonzero + ' & (df[' + str(column_Q) + ']!=0)'
+        #
+        #     expr = 'df[(' + nonzero + ') & (abs((df[' + str(column_P[0]) + ']'
+        #     for p_item in column_P[1:]:
+        #         expr += '+df[' + str(p_item) + ']'
+        #     if type(column_Q)==list:
+        #         expr += ')-df[' + str(column_Q[0]) + ']) '
+        #     else:
+        #         expr += ')-' + str(column_Q) + ' '
+        #     if result_type == True:
+        #         expr += '< 1.5e'+str(-parameters.get("decimal", 0))+')]'
+        #     else:
+        #         expr += '>= 1.5e'+str(-parameters.get("decimal", 0))+')]'
+        # else:
+        #     if result_type == True:
+        #         string_pattern = str(pattern_operator)
+        #     else:
+        #         if pattern_operator == "<":
+        #             string_pattern = ">="
+        #         elif pattern_operator == "<=":
+        #             string_pattern = ">"
+        #         elif pattern_operator == ">=":
+        #             string_pattern = "<"
+        #         elif pattern_operator == ">":
+        #             string_pattern = "<="
+        #         else:
+        #             string_pattern = "UKNOWN"
+        #     expr = 'df[(df[' + str(column_P[0]) + ']'
+        #     for p_item in column_P[1:]:
+        #         expr += '+ df[' + str(p_item) + ']'
+        #     if column_Q[0]=='{':
+        #         expr += ")" + string_pattern + 'df[' + str(column_Q[0]) + ']]'
+        #     else:
+        #         expr += ")" + string_pattern + str(column_Q[0]) + ']'
 
         # P_operators = parameters.get("P_operators", ['='] * len(column_P))
         # # operators between Q_column and Q_value, default is =
@@ -1160,10 +1167,6 @@ def to_pandas_expression(pattern, encode, result_type, parameters, dataframe):
         #     else:
         #         expr = "df[(" + condition_P + ") & (" + condition_Q + ")]"
 
-        expr = res
-
-    print(expr)
-    return expr
 
 def find_redundant_patterns(df_patterns = None):
     '''This function checks whether there are redundant patterns and changes pattern status accordingly
