@@ -161,7 +161,9 @@ def expression2pandas(g, nonzero_col, parameters):
 
     exclude_zero_columns = parameters.get("sum", False)
     both_ways = parameters.get("both_ways", False)
-    decimal = parameters.get("decimal", 0)
+    decimal = parameters.get("decimal", 8)
+    if decimal > 0:
+        decimal = -decimal
 
     item = re.search(r'IF(.*)THEN(.*)', g)
     if item is not None:
@@ -177,7 +179,7 @@ def expression2pandas(g, nonzero_col, parameters):
         item = re.search(r'(.*)(==)(.*)', g)
         if item is not None:
             g_co = 'abs('+ item[1].strip() + '-' + item[3].strip() + ')<1.5e' + str(decimal)
-            g_ex = 'abs(' + item[1].strip() + '-' + item[3].strip() + ')=>1.5e' + str(decimal)
+            g_ex = 'abs(' + item[1].strip() + '-' + item[3].strip() + ')>=1.5e' + str(decimal)
             co_str = 'df[('+g_co+')&'
             ex_str = 'df[('+g_ex+')&'
             if exclude_zero_columns:

@@ -13,45 +13,21 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                             ['Insurer  9', 'non-life insurer', 9000,     0,         8800,          200,         200],
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
-miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find({'name' : 'Pattern 1',
-     'pattern'  : '-->',
-     'P_columns': ['TV-life', 'Assets'],
-     'P_values' : [100, 0],
-     'Q_values' : [0,0],
-     'Q_columns': ['TV-nonlife', 'Own funds'],
-     'parameters' : {"min_confidence" : 0, "min_support" : 1, 'Q_operators': ['>', '>'],
-     'P_operators':['<','>'], 'Q_logics':['|'], 'both_ways':False}} )
 
-print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
-print(df[(((df["TV-life"]<100)) & ((df["Assets"]>0))) & (((df["TV-nonlife"]>0)) | ((df["Own funds"]>0)))])
+parameters = {'min_confidence': 0.5,'min_support'   : 2, 'decimal':0}
+p2 = {'name'      : 'equal values',
+      'pattern'   : '=',
+      'parameters': parameters}
 miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find({'name'     : 'Pattern 1',
-     'pattern'  : '-->',
-     'P_columns': ['TV-life'],
-     'P_values' : [0],
-     'Q_columns': ['TV-nonlife'],
-     'Q_values' : [8800],
-     'parameters' : {"min_confidence" : 0, "min_support" : 1, 'both_ways':True}} )
-
-print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
-miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find({'name'      : 'equal values',
-                          'pattern'   : '=',
-                          'value' : 0,
-                          'parameters': {"min_confidence": 0.5,
-                                         "min_support"   : 2}})
+df_patterns = miner.find(p2 )
+print(df[(abs((df["Own funds"]-df["Excess"]))<1.5e0)])
 print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
 
+parameters = {'min_confidence': 0.5,'min_support'   : 2}
+p2 = {'name'      : 'type pattern',
+      'expression' : 'IF ({*#} = "life insurer") THEN ({As*#} > 0)' }
 miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find({'name'      : 'sum pattern',
-                          'pattern'   : 'sum',
-                          'parameters': {"min_confidence": 0.5,
-                                         "min_support"   : 1,
-                                         "sum" : True }})
-
+df_patterns = miner.find(p2)
 print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])

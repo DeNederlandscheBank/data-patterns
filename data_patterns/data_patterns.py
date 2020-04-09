@@ -142,9 +142,9 @@ class PatternMiner:
 def derive_patterns(dataframe   = None,
                     metapatterns = None):
     '''Derive patterns from metapatterns
-       In three flavours: 
-       - expressions (defined as a string), 
-       - conditional rules ('-->'-pattern defined with their columns) and 
+       In three flavours:
+       - expressions (defined as a string),
+       - conditional rules ('-->'-pattern defined with their columns) and
        - single rules (defined with their colums)
     '''
     df_patterns = pd.DataFrame(columns = PATTERNS_COLUMNS)
@@ -173,8 +173,11 @@ def derive_patterns_from_template_expression(metapattern = None,
     Here we can add the constructions of expressions from an expression with wildcards
     """
     expression = metapattern.get("expression", "")
-    return derive_patterns_from_expression(expression, metapattern, dataframe)
+    parameters = metapattern.get("parameters", {})
 
+    new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
+    df_patterns = to_dataframe(patterns = new_list, parameters = parameters)
+    return df_patterns
 def derive_patterns_from_expression(expression = "",
                                     metapattern = None,
                                     dataframe = None):
@@ -182,18 +185,37 @@ def derive_patterns_from_expression(expression = "",
     """
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
-    encode = metapattern.get(ENCODE, {})
+    encode = metapattern.get(ENCODE, {}) # TO DO
     encodings = get_encodings()
     confidence, support = get_parameters(parameters)
-    pandas_expressions = to_pandas_expressions(expression, encode, parameters, dataframe)
-    n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe}).index)
-    n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe}).index)
-    conf = np.round(n_co / (n_co + n_ex), 4)
-    if ((conf >= confidence) and (n_co >= support)):
-        xbrl_expressions = to_xbrl_expressions(expression, encode, parameters)
-        return [[[name, 0], expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions]
-    else:
-        return list()
+
+    patterns = list()
+
+    amount = expression.count("#") #Amount of columns to be found
+    all_columns = []
+    for item in re.findall(r'{.*?#}', expression): # See which columns we are looking for per left open column
+        if len(item) == 4: #if no charachters is given, use all columns
+            all_columns.append(list(dataframe.columns))
+        else:
+            all_columns.append([s for s in list(dataframe.columns) if s.startswith(item[1:-3])]) # Find columns that start with given substring
+            expression = expression.replace(item, '{*#}', 1) # Replace it so that it goes well later
+
+    for columns in [p for p in itertools.product(*all_columns) if len(set(p)) == len(p)]: # Make all combinations without duplicates
+        possible_expression = expression
+        for column in columns:
+            possible_expression = possible_expression.replace("*#", '"' + column + '"', 1) # replace with column
+
+        pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
+        try: # Some give error so we use try
+            n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe}).index)
+            n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe}).index)
+            conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
+            if ((conf >= confidence) and (n_co >= support)):
+                xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
+                patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions])
+        except:
+            continue
+    return patterns
 
 def derive_conditional_patterns(metapattern = None,
                                 dataframe = None):
