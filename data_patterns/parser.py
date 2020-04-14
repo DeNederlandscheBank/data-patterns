@@ -125,6 +125,8 @@ def preprocess_pattern(pattern):
     pattern = pattern.replace("=" , "==")
     pattern = pattern.replace(">==" , ">=")
     pattern = pattern.replace("<==" , "<=")
+    pattern = pattern.replace('!==', '!=')
+
     return pattern
 
 def datapoints2pandas(s, encode):

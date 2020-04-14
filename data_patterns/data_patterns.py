@@ -178,6 +178,57 @@ def derive_patterns_from_template_expression(metapattern = None,
     new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
     df_patterns = to_dataframe(patterns = new_list, parameters = parameters)
     return df_patterns
+
+def get_possible_columns(amount, expression, dataframe):
+    all_columns = []
+
+    for datapoint in re.findall(r'{.*?}', expression): # See which columns we are looking for per left open column
+        d = datapoint[2:-2] # strip {" and "}
+        all_columns.append([re.search(d, col).group(0) for col in dataframe.columns if re.search(d, col)])
+        expression = expression.replace(datapoint, '{.*}', 1) # Replace it so that it goes well later
+
+    if amount > 1: # Combine the lists into combinations where we do not have duplicates
+        possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == len(p)]
+    elif amount == 1: # If we have one empty spot, then just use the possible values
+        possibilities = [[i] for i in all_columns[0]]
+    else: # if we have a normal expression then go further with that
+        return [expression]
+    possible_expressions = [] # list of all possible expressions
+    for columns in possibilities:
+        possible_expression = expression
+        for column in columns: # replace with the possible column value
+            possible_expression = possible_expression.replace(".*", '"' + column + '"', 1) # replace with column
+        possible_expressions.append(possible_expression)
+    return possible_expressions
+
+def get_possible_values(amount, possible_expressions, dataframe):
+    if amount < 1: # no values to be found
+        return possible_expressions
+    else:
+        expressions = []
+        for possible_expression in possible_expressions:
+            all_columns_v = []
+            for item in re.findall(r'.*?@', possible_expression): # See which columns we are looking for per left open column
+                value_col = re.findall("{.*?}", item)[-1] # Get the column that matches the value indicator *@
+                value_col = value_col[2:-2] # strip { and }
+                all_columns_v.append(list(dataframe[value_col].unique()))
+
+            if amount > 1: # same with columns
+                possibilities_v = [p for p in itertools.product(*all_columns_v)]
+            else:
+                possibilities_v = [[i] for i in all_columns_v[0]]
+
+
+            for columns_v in possibilities_v: # Make all combinations without duplicates  of values
+                possible_expression_v = possible_expression
+                for column_v in columns_v:
+                    if isinstance(column_v, str):
+                        possible_expression_v = possible_expression_v.replace("@", '"'+ column_v +'"', 1) # replace adn add ""
+                    else:
+                        possible_expression_v = possible_expression_v.replace("@", str(column_v), 1) # replace with str
+                    expressions.append(possible_expression_v)
+        return expressions
+
 def derive_patterns_from_expression(expression = "",
                                     metapattern = None,
                                     dataframe = None):
@@ -191,20 +242,13 @@ def derive_patterns_from_expression(expression = "",
 
     patterns = list()
 
-    amount = expression.count("#") #Amount of columns to be found
-    all_columns = []
-    for item in re.findall(r'{.*?#}', expression): # See which columns we are looking for per left open column
-        if len(item) == 4: #if no charachters is given, use all columns
-            all_columns.append(list(dataframe.columns))
-        else:
-            all_columns.append([s for s in list(dataframe.columns) if s.startswith(item[1:-3])]) # Find columns that start with given substring
-            expression = expression.replace(item, '{*#}', 1) # Replace it so that it goes well later
+    amount = expression.count('.*"}') #Amount of columns to be found
+    amount_v = expression.count("@") #Amount of column values to be found
 
-    for columns in [p for p in itertools.product(*all_columns) if len(set(p)) == len(p)]: # Make all combinations without duplicates
-        possible_expression = expression
-        for column in columns:
-            possible_expression = possible_expression.replace("*#", '"' + column + '"', 1) # replace with column
+    possible_expressions = get_possible_columns(amount, expression, dataframe)
+    possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe)
 
+    for possible_expression in possible_expressions:
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
         try: # Some give error so we use try
             n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe}).index)
@@ -215,6 +259,7 @@ def derive_patterns_from_expression(expression = "",
                 patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions])
         except:
             continue
+
     return patterns
 
 def derive_conditional_patterns(metapattern = None,

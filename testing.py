@@ -14,19 +14,30 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
 
-parameters = {'min_confidence': 0.5,'min_support'   : 2, 'decimal':0}
-p2 = {'name'      : 'equal values',
-      'pattern'   : '=',
-      'parameters': parameters}
+# p2 = {'name' : 'Pattern 1',
+#      'pattern'  : '-->',
+#      'P_columns': ['TV-life', 'Assets'],
+#      'P_values' : [100,0],
+#      'Q_values' : [0,0],
+#      'Q_columns': ['TV-nonlife', 'Own funds'],
+#      'parameters' : {"min_confidence" : 0, "min_support" : 1, 'Q_operators': ['>', '>'],
+#      'P_operators':['<','>']}}
+#
+# miner = data_patterns.PatternMiner(df)
+# df_patterns = miner.find(p2 )
+# print(df_patterns.to_string())
+# print(df_patterns.loc[0,'pandas co'])
+parameters = {'min_confidence': 0.5,'min_support'   : 2}
+p2 = {'name'      : 'type pattern',
+      'expression' : 'IF ({".*Ty.*"} = "life insurer") THEN ({".*ss.*"} > 0)' }
 miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(p2 )
-print(df[(abs((df["Own funds"]-df["Excess"]))<1.5e0)])
+df_patterns = miner.find(p2)
 print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
 
 parameters = {'min_confidence': 0.5,'min_support'   : 2}
 p2 = {'name'      : 'type pattern',
-      'expression' : 'IF ({*#} = "life insurer") THEN ({As*#} > 0)' }
+      'expression' : 'IF ({".*Ty.*"} != @) THEN ({".*.*"} = @)'}
 miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find(p2)
 print(df_patterns.to_string())
