@@ -180,19 +180,23 @@ def derive_patterns_from_template_expression(metapattern = None,
     return df_patterns
 
 def get_possible_columns(amount, expression, dataframe):
+    if amount == 0:
+        return [expression]
+
     all_columns = []
 
     for datapoint in re.findall(r'{.*?}', expression): # See which columns we are looking for per left open column
         d = datapoint[2:-2] # strip {" and "}
         all_columns.append([re.search(d, col).group(0) for col in dataframe.columns if re.search(d, col)])
         expression = expression.replace(datapoint, '{.*}', 1) # Replace it so that it goes well later
-
     if amount > 1: # Combine the lists into combinations where we do not have duplicates
-        possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == len(p)]
+        if re.search('AND', expression):
+            possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == int(len(p)/2)]
+        else:
+            possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == len(p)]
     elif amount == 1: # If we have one empty spot, then just use the possible values
         possibilities = [[i] for i in all_columns[0]]
-    else: # if we have a normal expression then go further with that
-        return [expression]
+
     possible_expressions = [] # list of all possible expressions
     for columns in possibilities:
         possible_expression = expression
@@ -247,7 +251,6 @@ def derive_patterns_from_expression(expression = "",
 
     possible_expressions = get_possible_columns(amount, expression, dataframe)
     possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe)
-
     for possible_expression in possible_expressions:
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
         try: # Some give error so we use try
@@ -365,7 +368,6 @@ def derive_conditional_pattern(dataframe = None,
             if c in encode.keys():
                 df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
     patterns = list()
-
     # Booleans so that we know if P and Q values are given or not
     bool_P = False
     if P_values is None:

@@ -164,6 +164,8 @@ def expression2pandas(g, nonzero_col, parameters):
     exclude_zero_columns = parameters.get("sum", False)
     both_ways = parameters.get("both_ways", False)
     decimal = parameters.get("decimal", 8)
+    if re.search('AND', g):
+        both_ways = True
     if decimal > 0:
         decimal = -decimal
 
