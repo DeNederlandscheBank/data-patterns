@@ -29,6 +29,7 @@ class TestData_patterns(unittest.TestCase):
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
         df.set_index('Name', inplace = True)
         pattern = {'name'     : 'Pattern 1',
+                    'pattern' : '-->',
                    'P_columns': ['Type'],
                    'Q_columns': ['Assets', 'TV-life', 'TV-nonlife', 'Own funds'],
                    'encode'   : {'Assets':      'reported',
@@ -186,7 +187,7 @@ class TestData_patterns(unittest.TestCase):
                                   'pattern'   : 'sum',
                                   'parameters': {"min_confidence": 0.5,
                                                  "min_support"   : 1,
-                                                 "sum" : True }}
+                                                 "nonzero" : True }}
         # Expected output
         expected = pd.DataFrame(columns = ['index','pattern_id', 'cluster', 'pattern_def', 'support', 'exceptions',
                                     'confidence'],
@@ -197,7 +198,7 @@ class TestData_patterns(unittest.TestCase):
                                 [2,'sum pattern', 0, '({"TV-nonlife"} + {"Own funds"} = {"Assets"})',
                                 3, 1, 0.75],
                                 [3,'sum pattern', 0, '({"TV-nonlife"} + {"Excess"} = {"Assets"})',
-                                3, 1, 0.75]])
+                                2, 2, 0.50]])
         expected.set_index('index', inplace = True)
         expected = data_patterns.PatternDataFrame(expected)
 
@@ -225,7 +226,7 @@ class TestData_patterns(unittest.TestCase):
         df.set_index('Name', inplace = True)
         parameters = {'min_confidence': 0.5,'min_support'   : 2}
         p2 = {'name'      : 'Pattern 1',
-              'expression' : 'IF ({".*TV-life.*"} = 0) THEN ({".*TV-nonlife.*"} = 8800) AND IF ~({".*TV-life.*"} = 0) THEN ~({".*TV-nonlife.*"} = 8800)',
+              'expression' : 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) AND IF ~({.*TV-life.*} = 0) THEN ~({.*TV-nonlife.*} = 8800)',
               'parameters' : parameters }
         # Expected output
         expected = pd.DataFrame(columns = ['index','pattern_id', 'cluster', 'pattern_def', 'support', 'exceptions',
@@ -260,7 +261,7 @@ class TestData_patterns(unittest.TestCase):
         df.set_index('Name', inplace = True)
         parameters = {'min_confidence': 0.5,'min_support'   : 2}
         p2 = {'name'      : 'Pattern 1',
-            'expression' : 'IF ({".*Ty.*"} != @) THEN ({".*.*"} = @)'}
+            'expression' : 'IF ({.*Ty.*} != "@") THEN ({.*.*} = "@")'}
         # Expected output
         expected = pd.DataFrame(columns = ['index','pattern_id', 'cluster', 'pattern_def', 'support', 'exceptions',
                                     'confidence'],

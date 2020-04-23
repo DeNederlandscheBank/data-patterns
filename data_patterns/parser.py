@@ -41,7 +41,15 @@ logicals = {
 }
 
 def generate_single_expression(P_columns, Q_columns, pattern):
-    if isinstance(Q_columns, list):
+    if pattern == 'percentile':
+            expression = '({"' + P_columns[0] + '"} ' + '>=' + ' ' +  str(Q_columns[0])  + ') & ({"' + P_columns[0] + '"} ' + '<=' + ' ' +  str(Q_columns[1])  + ')'
+    elif pattern == 'sum':
+        expression = '({"' + P_columns[0] + '"}'
+        for idx in range(len(P_columns[1:])):
+            expression += ' + {"' + P_columns[idx+1]+ '"}'
+        expression += ' = {"' + Q_columns[0] + '"})'
+        return expression
+    elif isinstance(Q_columns, list):
         expression = '({"' + P_columns[0] + '"} ' + pattern + ' {"' + Q_columns[0] + '"})'
     else:
         expression = '({"' + P_columns[0] + '"} ' + pattern + ' ' + str(Q_columns) + ')'
@@ -145,7 +153,7 @@ def datapoints2pandas(s, encode):
         nonzero_col.append("df["+item+"]")
     return res, nonzero_col
 
-def add_brackets(s, decimal = 0):
+def add_brackets(s, decimal = 8):
     """Add brackets around expressions with & and |
     """
     item = re.search(r'(.*)([&|\|])(.*)', s) # & and | takes priority over other functions like ==
@@ -161,12 +169,12 @@ def add_brackets(s, decimal = 0):
 def expression2pandas(g, nonzero_col, parameters):
     """Transform conditional expression to Pandas code"""
 
-    exclude_zero_columns = parameters.get("sum", False)
+    exclude_zero_columns = parameters.get("nonzero", False)
     both_ways = parameters.get("both_ways", False)
     decimal = parameters.get("decimal", 8)
     if re.search('AND', g):
         both_ways = True
-    if decimal > 0:
+    if decimal != 0:
         decimal = -decimal
 
     item = re.search(r'IF(.*)THEN(.*)', g)
@@ -193,6 +201,12 @@ def expression2pandas(g, nonzero_col, parameters):
             co_str = co_str[:-1] + ']'
             ex_str = ex_str[:-1] + ']'
         else:
-            co_str = 'df[('+add_brackets(g)+')]'
-            ex_str = 'df[~('+add_brackets(g)+')]'
+            co_str = 'df[('+add_brackets(g)+')&'
+            ex_str = 'df[~('+add_brackets(g)+')&'
+            if exclude_zero_columns:
+                for i in nonzero_col:
+                    co_str += '(' + i +'!=0)&'
+                    ex_str += '(' + i +'!=0)&'
+            co_str = co_str[:-1] + ']'
+            ex_str = ex_str[:-1] + ']'
     return co_str, ex_str

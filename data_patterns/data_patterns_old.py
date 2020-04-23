@@ -69,12 +69,13 @@ class PatternMiner:
     def find(self, *args, **kwargs):
         '''General function to find patterns
         '''
-
         self.__process_parameters(*args, **kwargs)
+
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
 
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
+
         if (not kwargs.get('append', False)) or (self.df_patterns is None):
             self.df_patterns = new_df_patterns
         else:
@@ -151,8 +152,12 @@ def derive_patterns(dataframe   = None,
         if "expression" in metapattern.keys():
             patterns = derive_patterns_from_template_expression(metapattern = metapattern,
                                                                 dataframe = dataframe)
+        elif metapattern.get("pattern", "-->") == "-->":
+
+            patterns = derive_conditional_patterns(metapattern = metapattern,
+                                                   dataframe = dataframe)
         else:
-            patterns = derive_patterns_from_code(metapattern = metapattern,
+            patterns = derive_single_patterns(metapattern = metapattern,
                                               dataframe = dataframe)
         df_patterns = df_patterns.append(patterns, ignore_index = True)
 
@@ -222,9 +227,9 @@ def get_possible_values(amount, possible_expressions, dataframe):
                 possible_expression_v = possible_expression
                 for column_v in columns_v:
                     if isinstance(column_v, str):
-                        possible_expression_v = possible_expression_v.replace('"@"', '"'+ column_v +'"', 1) # replace adn add ""
+                        possible_expression_v = possible_expression_v.replace("@", '"'+ column_v +'"', 1) # replace adn add ""
                     else:
-                        possible_expression_v = possible_expression_v.replace('"@"', str(column_v), 1) # replace with str
+                        possible_expression_v = possible_expression_v.replace("@", str(column_v), 1) # replace with str
                     expressions.append(possible_expression_v)
         return expressions
 
@@ -260,63 +265,78 @@ def derive_patterns_from_expression(expression = "",
 
     return patterns
 
-def derive_patterns_from_code(metapattern = None,
+def derive_conditional_patterns(metapattern = None,
                                 dataframe = None):
     '''Derive conditional rule patterns
        If no columns are given, then the algorithm searches for all possibilities
     '''
-    patterns = list()
+    new_list = list()
 
-
-    P_dataframe = metapattern.get("P_dataframe", None)
-    Q_dataframe = metapattern.get("Q_dataframe", None)
-    pattern = metapattern.get("pattern", None)
-    pattern_name = metapattern.get("name", None)
-    columns = metapattern.get("columns", None)
-    P_columns = metapattern.get("P_columns", None)
-    Q_columns = metapattern.get("Q_columns", None)
-    value = metapattern.get("value", None)
-    values = metapattern.get("values", None)
     parameters = metapattern.get("parameters", {})
 
+    include_subsets = parameters.get("include_subsets", False)
+    include_subsets_p = parameters.get("include_subsets_P_columns", False)
+    include_subsets_q = parameters.get("include_subsets_Q_columns", False)
 
-    if P_columns is not None:
-        P_columns = [dataframe.columns.get_loc(c) for c in P_columns]
+    if include_subsets:
+        p_part = None
+        q_part = None
+        col_total_p = metapattern.get("P_columns", None)
+        col_total_q = metapattern.get("Q_columns", None)
+    elif include_subsets_q:
+        q_part = None
+        col_total_q = metapattern.get("Q_columns", None)
+        p_part = metapattern.get("P_columns", None)
+        col_total_p = dataframe.columns
+    elif include_subsets_p:
+        p_part = None
+        col_total_p = metapattern.get("P_columns", None)
+        q_part = metapattern.get("Q_columns", None)
+        col_total_q = dataframe.columns
     else:
-        P_columns = range(len(dataframe.columns))
+        p_part = metapattern.get("P_columns", None)
+        q_part = metapattern.get("Q_columns", None)
+        col_total_p = list(dataframe.columns.values)
+        col_total_q = list(dataframe.columns.values)
 
-    if Q_columns is not None:
-        Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns]
+    metapattern = copy.deepcopy(metapattern)
+
+    # there are four cases:
+    # - p and q are given,
+    # - p is given but q is not given,
+    # - q is given but p is not,
+    # - p and q are not given
+
+    if ((p_part is None) and (q_part is not None)):
+        p_set = [col for col in col_total_p if col not in metapattern["Q_columns"]]
+        p_set = itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set)))
+        for item in p_set:
+            metapattern["P_columns"] = list(item)
+            new_patterns = derive_conditional_pattern(metapattern = metapattern, dataframe = dataframe)
+            new_list.extend(new_patterns)
+    elif ((q_part is None) and (p_part is not None)):
+        q_set = [col for col in col_total_q if col not in metapattern["P_columns"]]
+        q_set = itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set)))
+        for item in q_set:
+            metapattern["Q_columns"] = list(item)
+            new_patterns = derive_conditional_pattern(metapattern = metapattern, dataframe = dataframe)
+            new_list.extend(new_patterns)
+    elif ((q_part is None) and (p_part is None)):
+        p_set = [col for col in col_total_p]
+        p_set = itertools.chain.from_iterable(itertools.combinations(p_set, n+1) for n in range(len(p_set)))
+        for p_item in p_set:
+            q_set = [col for col in col_total_q if col not in p_item]
+            q_set = itertools.chain.from_iterable(itertools.combinations(q_set, n+1) for n in range(len(q_set)))
+            for q_item in q_set:
+                metapattern["Q_columns"] = list(q_item)
+                metapattern["P_columns"] = list(p_item)
+                new_patterns = derive_conditional_pattern(metapattern = metapattern, dataframe = dataframe)
+                new_list.extend(new_patterns)
     else:
-        Q_columns = range(len(dataframe.columns))
-
-    if columns is not None:
-        columns = [dataframe.columns.get_loc(c) for c in columns]
-    else:
-        columns = range(len(dataframe.columns))
-
-
-    if pattern == '-->':
-        possible_expressions = derive_conditional_pattern(metapattern = metapattern, dataframe = dataframe)
-
-    # everything else -> c1 pattern c2
-    else:
-        possible_expressions = derive_quantitative_pattern(dataframe = dataframe,
-                                        pattern = pattern,
-                                        pattern_name = pattern_name,
-                                         P_columns = P_columns,
-                                         Q_columns = Q_columns,
-                                        columns = columns,
-                                        value = value,
-                                        parameters = parameters)
-
-
-    for expression in possible_expressions:
-        patterns.extend(derive_patterns_from_expression(expression, metapattern, dataframe))
-
-    df_patterns = to_dataframe(patterns = patterns, parameters = parameters)
+        new_patterns = derive_conditional_pattern(metapattern = metapattern, dataframe = dataframe)
+        new_list.extend(new_patterns)
+    df_patterns = to_dataframe(patterns = new_list, parameters = parameters)
     return df_patterns
-
 
 def derive_conditional_pattern(dataframe = None,
                                metapattern = None):
@@ -329,10 +349,14 @@ def derive_conditional_pattern(dataframe = None,
     encode = metapattern.get(ENCODE, {})
     P_columns = metapattern.get("P_columns", list(dataframe.columns.values))
     Q_columns = metapattern.get("Q_columns", list(dataframe.columns.values))
-    P_values = metapattern.get("P_values", ['@']*len(P_columns)) # in case we do not have values
-    Q_values = metapattern.get("Q_values", ['@']*len(Q_columns))
+    P_values = metapattern.get("P_values", None)
+    Q_values = metapattern.get("Q_values", None)
 
     confidence, support = get_parameters(parameters)
+
+    # adding index levels to columns (in case the pattern contains index elements)
+    for level in range(len(dataframe.index.names)):
+        dataframe[dataframe.index.names[level]] = dataframe.index.get_level_values(level = level)
 
     # derive df_feature list from P and Q (we use a copy, so we can change values for encodings)
     df_features = dataframe[P_columns + Q_columns].copy()
@@ -343,140 +367,139 @@ def derive_conditional_pattern(dataframe = None,
         for c in df_features.columns:
             if c in encode.keys():
                 df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
-    if encode != {}: # only use when P value is not given
-        expressions = []
-        df_features = df_features.drop_duplicates(P_columns + Q_columns)
-        for idx in range(len(df_features.index)):
-            P_values = list(df_features[P_columns].values[idx])
-            Q_values = list(df_features[Q_columns].values[idx])
+    patterns = list()
+    # Booleans so that we know if P and Q values are given or not
+    bool_P = False
+    if P_values is None:
+        bool_P = True
+    bool_Q = False
+    if Q_values is None:
+        bool_Q = True
+
+    # In the case of Q or P values not given, we can use the old code
+    if bool_P or bool_Q:
+        if bool_P and bool_Q:
+            df_potential_patterns = df_features.drop_duplicates(P_columns + Q_columns)
+        elif bool_P:
+            df_potential_patterns = df_features.drop_duplicates(P_columns) # these are all unique combinations, i.e. the potential rules
+        elif bool_Q:
+            df_potential_patterns = df_features.drop_duplicates(Q_columns) # these are all unique combinations, i.e. the potential rules
+        for idx in range(len(df_potential_patterns.index)):
+            if bool_P: # only use when P value is not given
+                P_values = list(df_potential_patterns[P_columns].values[idx])
+            if bool_Q:# only use when Q value is not given
+                Q_values = list(df_potential_patterns[Q_columns].values[idx])
             expression = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, parameters)
 
-            expressions.append(expression)
 
-        return expressions
+            patterns.extend(derive_patterns_from_expression(expression, metapattern, dataframe))
+
     # In the case that P and Q values are both given, we only want to compute it for these values and not search for other values like above
-    expression = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, parameters)
-    return [expression]
-
-
-def get_parameters(parameters):
-    confidence = parameters.get("min_confidence", 0.75)
-    support = parameters.get("min_support", 2)
-    return confidence, support
-
-def derive_quantitative_pattern(dataframe = None,
-                                pattern = None,
-                                pattern_name = "quantitative",
-                                 P_columns = None,
-                                 Q_columns = None,
-                                columns = None,
-                                value = None,
-                                parameters = {}):
-
-    confidence, support = get_parameters(parameters)
-    data_array = dataframe.values.T
-    patterns = list()
-    decimal = parameters.get("decimal", 8)
-
-    if value is not None:
-        for c in columns:
-            # confirmations and exceptions of the pattern, a list of booleans
-            try:
-                pattern_def = generate_single_expression([dataframe.columns[c]], value, pattern)
-                patterns.append(pattern_def)
-            except:
-                continue
-
-    elif pattern == 'percentile':
-        percentile = parameters['percentile']
-        add_per = (100-percentile)/2
-        for c in columns:
-            # confirmations and exceptions of the pattern, a list of booleans
-            try:
-                upper = round(np.percentile(data_array[c, :], percentile + add_per),2)
-                lower = round(np.percentile(data_array[c, :], add_per),2)
-
-                # confirmations and exceptions of the pattern, a list of booleans
-                pattern_def = generate_single_expression([dataframe.columns[c]], [lower, upper], pattern)
-                patterns.append(pattern_def)
-            except:
-                continue
-
-    elif pattern == 'sum':
-        sum_elements = parameters.get("sum_elements", 2)
-        preprocess_operator = preprocess["sum"]
-        nonzero = (dataframe.values != 0).T
-        for lhs_elements in range(2, sum_elements + 1):
-            for rhs_column in Q_columns:
-                start_array = data_array
-                # minus righthandside is taken so we can use sum function for all columns
-                try:
-                    start_array[rhs_column, :] = -start_array[rhs_column, :]
-                except:
-                    continue
-                lhs_column_list = [col for col in P_columns if (col != rhs_column)]
-                for lhs_columns in itertools.combinations(lhs_column_list, lhs_elements):
-                            pattern_def = generate_single_expression([dataframe.columns[c] for c in lhs_columns], [dataframe.columns[rhs_column]], pattern)
-                            patterns.append(pattern_def)
-
-    elif pattern == 'ratio':
-        # TO DO
-        return
     else:
-        preprocess_operator = preprocess[pattern]
-        for c0 in P_columns:
-            for c1 in Q_columns:
-                if c0 != c1:
-                    # applying the filter
-                    try:
-                        pattern_def = generate_single_expression([dataframe.columns[c0]], [dataframe.columns[c1]], pattern)
-                        patterns.append(pattern_def)
-                    except:
-                        continue
+        expression = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, parameters)
+        patterns.extend(derive_patterns_from_expression(expression, metapattern, dataframe))
+
+    # deleting the levels of the index to the columns
+    for level in range(len(dataframe.index.names)):
+        del dataframe[dataframe.index.names[level]]
     return patterns
 
+def derive_single_patterns(metapattern  = None,
+                           dataframe    = None):
+    '''
+    '''
+    logger = logging.getLogger("single-pattern")
 
+    P_dataframe = metapattern.get("P_dataframe", None)
+    Q_dataframe = metapattern.get("Q_dataframe", None)
+    pattern = metapattern.get("pattern", None)
+    pattern_name = metapattern.get("name", None)
+    columns = metapattern.get("columns", None)
+    P_columns = metapattern.get("P_columns", None)
+    Q_columns = metapattern.get("Q_columns", None)
+    value = metapattern.get("value", None)
+    values = metapattern.get("values", None)
+    parameters = metapattern.get("parameters", {})
 
+    # if P_dataframe and Q_dataframe are given then join the dataframes and select columns
+    if (P_dataframe is not None) and (Q_dataframe is not None):
+        try:
+            dataframe = P_dataframe.join(Q_dataframe)
+        except:
+            logger.error("Join of P_dataframe and Q_dataframe failed, overlapping columns?")
+            return []
+        P_columns = P_dataframe.columns
+        Q_columns = Q_dataframe.columns
 
-def derive_ratio_pattern(dataframe  = None,
-                   pattern_name = None,
-                   P_columns  = None,
-                   Q_columns  = None,
-                   parameters = {}):
-    """Generate patterns with ratios TODO: Needs big change!!
-    """
-    confidence, support = get_parameters(parameters)
-    limit_denominator = parameters.get("limit_denominator", 10000000)
-    decimal = parameters.get("decimal", 8)
-    preprocess_operator = preprocess["ratio"]
-    # set up boolean masks for nonzero items per column
-    nonzero = (dataframe.values != 0).T
-    for c0 in P_columns:
-        for c1 in Q_columns:
-            if c0 != c1:
-                # applying the filter
-                data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
-                data_array = map(lambda e: Fraction(e).limit_denominator(limit_denominator),
-                                 dataframe.values[data_filter, c0] / dataframe.values[data_filter, c1])
-                ratios = pd.Series(data_array)
-                if support >= 2:
-                    possible_ratios = ratios.loc[ratios.duplicated(keep = False)].unique()
-                else:
-                    possible_ratios = ratios.unique()
-                for v in possible_ratios:
-                    if (abs(v) > 1.5 * 10**(-decimal)) and (v > -1) and (v < 1):
-                        # confirmations of the pattern, a list of booleans
-                        co = ratios==v
-                        co_sum, ex_sum, conf = derive_pattern_statistics(co)
-                        if (conf >= confidence) and (co_sum >= support):
-                            pattern_data = [[pattern_name, 0],
-                                            [dataframe.columns[c0],
-                                             'ratio',
-                                            [dataframe.columns[c1]], '', '', ''],
-                                            [co_sum, ex_sum, conf], {}]
-                            if pattern_data:
-                                yield pattern_data
+    # select all columns with numerical values
+    numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns))
+                            if ((dataframe.dtypes[c] == 'float64') or (dataframe.dtypes[c] == 'int64')) and (dataframe.iloc[:, c] != 0).any()]
+    dataframe = dataframe[numerical_columns]
 
+    if P_columns is not None:
+        P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
+    else:
+        P_columns = range(len(dataframe.columns))
+
+    if Q_columns is not None:
+        Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
+    else:
+        Q_columns = range(len(dataframe.columns))
+
+    if columns is not None:
+        columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
+    else:
+        columns = range(len(dataframe.columns))
+
+    logger.info('START: %s (%s) in P_columns = %s and Q_columns = %s', pattern, pattern_name, str(P_columns), str(Q_columns))
+
+    # if a value is given -> columns pattern value
+    if value is not None:
+        results = derive_column_value_pattern(dataframe = dataframe,
+                                        pattern = pattern,
+                                        pattern_name = pattern_name,
+                                        columns = columns,
+                                        value = value,
+                                        parameters = parameters)
+    elif pattern == 'sum':
+        results = derive_sums_column_pattern(dataframe = dataframe,
+                                       pattern_name = pattern_name,
+                                       P_columns = P_columns,
+                                       Q_columns = Q_columns,
+                                       parameters = parameters)
+
+    elif pattern == 'percentile':
+        results = derive_percentile_column_pattern(dataframe = dataframe,
+                                       pattern_name = pattern_name,
+                                       pattern = pattern,
+                                       columns = columns,
+                                       parameters = parameters)
+
+    elif pattern == 'ratio':
+        results = derive_ratio_pattern(dataframe = dataframe,
+                                 pattern_name = pattern_name,
+                                 P_columns = P_columns,
+                                 Q_columns = Q_columns,
+                                 parameters = parameters)
+
+    # everything else -> c1 pattern c2
+    else:
+        results = derive_column_column_pattern(dataframe = dataframe,
+                                         pattern = pattern,
+                                         pattern_name = pattern_name,
+                                         P_columns = P_columns,
+                                         Q_columns = Q_columns,
+                                         parameters = parameters)
+
+    patterns = [[pattern_id] + [pattern] + [pattern_stats] +
+                to_pandas_expressions(pattern, {},parameters, dataframe) +
+                to_xbrl_expressions(pattern, {}, parameters)
+                 for [pattern_id, pattern, pattern_stats] in results]
+    df = to_dataframe(patterns = patterns, parameters = parameters)
+
+    logger.info('END: %s (%s)', pattern, pattern_name)
+
+    return df
 
 def to_pandas_expressions(pattern, encode, parameters, dataframe):
     """Derive pandas code from the pattern definition string both confirmation and exceptions"""
@@ -612,6 +635,236 @@ def derive_results(dataframe = None,
             df_results.index = df_results.index
     return ResultDataFrame(df_results)
 
+# def convert_columns(patterns = [],
+#                     dataframe_input = None,
+#                     dataframe_output = None):
+#     '''
+#     '''
+#     new_patterns = list()
+#     for pattern_id, pattern, pattern_stats, encode in patterns:
+#         new_pattern = [ [dataframe_output.columns[dataframe_input.columns.get_loc(item)] for item in pattern[0]],
+#                         pattern[1],
+#                         [dataframe_output.columns[dataframe_input.columns.get_loc(item)] for item in pattern[2]]] + pattern[3:6]
+#         new_encode = {dataframe_output.columns[dataframe_input.columns.get_loc(item)]: encode[item] for item in encode.keys()}
+#         new_patterns.append([pattern_id, new_pattern, pattern_stats, new_encode])
+#     return new_patterns
+
+
+def derive_pattern_statistics(co):
+    # co_sum is the support of the pattern
+    co_sum = co.sum()
+    #co_sum = optimized.apply_sum(co)
+    ex_sum = len(co) - co_sum
+    # conf is the confidence of the pattern
+    conf = np.round(co_sum / (co_sum + ex_sum), 4)
+    # oddsratio is a correlation measure
+    #oddsratio = (1 + co_sum) / (1 + ex_sum)
+    return co_sum, ex_sum, conf #, oddsratio
+
+def derive_pattern_data(df,
+                        P_columns,
+                        Q_columns,
+                        pattern,
+                        name,
+                        co,
+                        confidence,
+                        data_filter):
+    '''
+    '''
+    # pattern statistics
+    co_sum, ex_sum, conf = derive_pattern_statistics(co)
+    # we only store the patterns with confidence higher than conf
+    pattern_def = generate_single_expression(P_columns, Q_columns, pattern)
+    if conf >= confidence:
+        return [[name, 0], pattern_def, [co_sum, ex_sum, conf]]
+    else:
+        return []
+
+def get_parameters(parameters):
+    confidence = parameters.get("min_confidence", 0.75)
+    support = parameters.get("min_support", 2)
+    return confidence, support
+
+def derive_column_value_pattern(dataframe = None,
+                          pattern   = None,
+                          pattern_name = "value",
+                          columns   = None,
+                          value     = None,
+                          parameters= {}):
+    '''Generate patterns of the form [c1] operator value where c1 is in columns
+    '''
+    confidence, support = get_parameters(parameters)
+    data_array = dataframe.values.T
+    for c in columns:
+        # confirmations and exceptions of the pattern, a list of booleans
+        co = reduce(operators[pattern], [data_array[c, :], value])
+        pattern_data = derive_pattern_data(dataframe,
+                                           [dataframe.columns[c]],
+                                           value,
+                                           pattern,
+                                           pattern_name,
+                                           co,
+                                           confidence,
+                                           None)
+        if pattern_data and len(co) >= support:
+            yield pattern_data
+
+def derive_percentile_column_pattern(dataframe = None,
+                          pattern   = None,
+                          pattern_name = "value",
+                          columns   = None,
+                          parameters= {}):
+    '''Generate patterns of the form [c1] operator value where c1 is in columns
+    '''
+    confidence, support = get_parameters(parameters)
+    percentile = parameters['percentile']
+    add_per = (100-percentile)/2
+    data_array = dataframe.values.T
+    for c in columns:
+        # confirmations and exceptions of the pattern, a list of booleans
+        upper = round(np.percentile(data_array[c, :], percentile + add_per),2)
+        lower = round(np.percentile(data_array[c, :], add_per),2)
+
+        co1 = reduce(operators['>='], [data_array[c, :], lower])
+        co2 = reduce(operators['<='], [data_array[c, :], upper])
+        co = np.logical_and(co1,co2)
+        pattern_data = derive_pattern_data(dataframe,
+                                           [dataframe.columns[c]],
+                                           [lower, upper],
+                                           pattern,
+                                           pattern_name,
+                                           co,
+                                           confidence,
+                                           None)
+        if pattern_data and len(co) >= support:
+            yield pattern_data
+
+def derive_column_column_pattern(dataframe  = None,
+                                 pattern    = None,
+                                 pattern_name = "column",
+                                 P_columns  = None,
+                                 Q_columns  = None,
+                                 parameters = {}):
+    '''Generate patterns of the form [c1] operator [c2] where c1 and c2 are in columns
+    '''
+    confidence, support = get_parameters(parameters)
+    decimal = parameters.get("decimal", 8)
+    preprocess_operator = preprocess[pattern]
+    initial_data_array = dataframe.values.T
+    # set up boolean masks for nonzero items per column
+    nonzero = initial_data_array != None
+    for c0 in P_columns:
+        for c1 in Q_columns:
+            if c0 != c1:
+                # applying the filter
+                data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
+                if data_filter.any():
+                    data_array = initial_data_array[:, data_filter]
+                    if data_array.any():
+                        # confirmations of the pattern, a list of booleans
+                        if pattern == "=":
+                            co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
+                        else:
+                            co = reduce(operators[pattern], data_array[[c0, c1], :])
+                        pattern_data = derive_pattern_data(dataframe,
+                                            [dataframe.columns[c0]],
+                                            [dataframe.columns[c1]],
+                                            pattern,
+                                            pattern_name,
+                                            co,
+                                            confidence,
+                                            data_filter)
+                        if pattern_data and len(co) >= support:
+                            yield pattern_data
+
+def derive_sums_column_pattern(dataframe  = None,
+                         pattern_name = None,
+                         P_columns  = None,
+                         Q_columns  = None,
+                         parameters = {}):
+    '''Generate patterns of the form sum [c1-list] = [c2] where c1-list is column list and c2 is column
+    '''
+    confidence, support = get_parameters(parameters)
+    sum_elements = parameters.get("sum_elements", 2)
+    decimal = parameters.get("decimal", 8)
+    preprocess_operator = preprocess["sum"]
+    initial_data_array = dataframe.values.T
+    # set up boolean masks for nonzero items per column
+    nonzero = (dataframe.values != 0).T
+    n = len(dataframe.columns)
+    # setup matrix to speed up proces (under development)
+    # matrix = np.ones(shape = (n, n), dtype = bool)
+    # for c in itertools.combinations(range(n), 2):
+    #     v = (data_array[c[1], :] <= data_array[c[0], :] + 1).any() # all is too strict
+    #     matrix[c[0], c[1]] = v
+    #     matrix[c[1], c[0]] = ~v
+    # np.fill_diagonal(matrix, False)
+
+    for lhs_elements in range(2, sum_elements + 1):
+        for rhs_column in Q_columns:
+            start_array = initial_data_array
+            # minus righthandside is taken so we can use sum function for all columns
+            start_array[rhs_column, :] = -start_array[rhs_column, :]
+            lhs_column_list = [col for col in P_columns if (col != rhs_column)]
+            for lhs_columns in itertools.combinations(lhs_column_list, lhs_elements):
+                all_columns = lhs_columns + (rhs_column,)
+                data_filter = np.logical_and.reduce(nonzero[all_columns, :])
+                if data_filter.any():
+                    data_array = start_array[:, data_filter]
+                    co = (abs(np.sum(data_array[all_columns, :], axis = 0)) < 1.5 * 10**(-decimal))
+                    co_sum, ex_sum, conf = derive_pattern_statistics(co)
+                    # we only store the patterns that satisfy criteria
+                    if (conf >= confidence) and (co_sum >= support):
+                        P_column = [dataframe.columns[c] for c in lhs_columns]
+                        Q_column = [dataframe.columns[rhs_column]]
+                        pattern_def = '({"' + P_column[0] + '"}'
+                        for idx in range(len(P_column[1:])):
+                            pattern_def += ' + {"' + P_column[idx+1]+ '"}'
+                        pattern_def += ' = {"' + Q_column[0] + '"})'
+                        pattern_data = [[pattern_name, 0],
+                                        pattern_def,
+                                        [co_sum, ex_sum, conf]]
+                        if pattern_data:
+                            yield pattern_data
+
+def derive_ratio_pattern(dataframe  = None,
+                   pattern_name = None,
+                   P_columns  = None,
+                   Q_columns  = None,
+                   parameters = {}):
+    """Generate patterns with ratios
+    """
+    confidence, support = get_parameters(parameters)
+    limit_denominator = parameters.get("limit_denominator", 10000000)
+    decimal = parameters.get("decimal", 8)
+    preprocess_operator = preprocess["ratio"]
+    # set up boolean masks for nonzero items per column
+    nonzero = (dataframe.values != 0).T
+    for c0 in P_columns:
+        for c1 in Q_columns:
+            if c0 != c1:
+                # applying the filter
+                data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
+                data_array = map(lambda e: Fraction(e).limit_denominator(limit_denominator),
+                                 dataframe.values[data_filter, c0] / dataframe.values[data_filter, c1])
+                ratios = pd.Series(data_array)
+                if support >= 2:
+                    possible_ratios = ratios.loc[ratios.duplicated(keep = False)].unique()
+                else:
+                    possible_ratios = ratios.unique()
+                for v in possible_ratios:
+                    if (abs(v) > 1.5 * 10**(-decimal)) and (v > -1) and (v < 1):
+                        # confirmations of the pattern, a list of booleans
+                        co = ratios==v
+                        co_sum, ex_sum, conf = derive_pattern_statistics(co)
+                        if (conf >= confidence) and (co_sum >= support):
+                            pattern_data = [[pattern_name, 0],
+                                            [dataframe.columns[c0],
+                                             'ratio',
+                                            [dataframe.columns[c1]], '', '', ''],
+                                            [co_sum, ex_sum, conf], {}]
+                            if pattern_data:
+                                yield pattern_data
 
 def read_excel(filename = None,
                dataframe = None,
