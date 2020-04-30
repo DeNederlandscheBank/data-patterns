@@ -248,9 +248,10 @@ def derive_patterns_from_expression(expression = "",
 
     for possible_expression in possible_expressions:
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
+        # print(pandas_expressions)
         try: # Some give error so we use try
-            n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe}).index)
-            n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe}).index)
+            n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+            n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
             conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
             if ((conf >= confidence) and (n_co >= support)):
                 xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
@@ -482,7 +483,7 @@ def to_pandas_expressions(pattern, encode, parameters, dataframe):
     """Derive pandas code from the pattern definition string both confirmation and exceptions"""
 
     # preprocessing step
-    res = preprocess_pattern(pattern)
+    res = preprocess_pattern(pattern, parameters)
     # datapoints to pandas, i.e. {column} -> df[column]
     res, nonzero_col = datapoints2pandas(res, encode)
     # expression to pandas, i.e. IF X=x THEN Y=y -> df[df[X]=x & df[Y]=y] for confirmations
@@ -519,8 +520,8 @@ def update_statistics(dataframe = None,
             # Calculate pattern statistics (from evaluating pandas expressions)
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
-            n_co = len(eval(pandas_co, encodings, {'df': dataframe}).index)
-            n_ex = len(eval(pandas_ex, encodings, {'df': dataframe}).index)
+            n_co = len(eval(pandas_co, encodings,{'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+            n_ex = len(eval(pandas_ex, encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
             total = n_co + n_ex
             if total > 0:
                 conf = np.round(n_co / total, 4)

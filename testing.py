@@ -1,4 +1,4 @@
-import data_patterns.data_patterns_old as data_patterns
+import data_patterns.data_patterns
 import numpy as np
 import pandas as pd
 col = ['Name', 'Type', 'Assets', 'TV-life', 'TV-nonlife', 'Own funds', 'Diversification','Excess']
@@ -15,48 +15,44 @@ insurers = [['Insurer  1', 'life insurer',     1000,  800,    0,  200,   12,  20
 df = pd.DataFrame(columns = col, data = insurers)
 df.set_index('Name', inplace = True)
 df
+parameters = {'min_confidence': 0.2,'min_support'   : 1, 'nonzero':False,'solvency' : True}
 
-p2 = {'name'     : 'Pattern 1',
-            'pattern' : '-->',
-           'P_columns': ['Type'],
-           'Q_columns': ['Assets', 'TV-life', 'TV-nonlife', 'Own funds'],
-           'encode'   : {'Assets':      'reported',
-                         'TV-life':     'reported',
-                         'TV-nonlife':  'reported',
-                         'Own funds':   'reported'}}
+p2 = {'name'      : 'Pattern 1',
+      'expression' : 'IF {"S.27.01.01.04,R1260,C0220"}<>0 THEN {"S.27.01.01.04,R1260,C0240"}={"S.27.01.01.04,R1260,C0230"}/{"S.27.01.01.04,R1260,C0220"}',
+      'parameters' : parameters }
 
 miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find(p2 )
 print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
-
-parameters = {'min_confidence': 0.5,'min_support'   : 1, 'nonzero':False}
-p2 = {'name'      : 'type pattern',
-        'pattern' : '>',
-        # 'value' : '"@"',
-        'columns' : [ 'TV-nonlife', 'Own funds', 'Diversification'],
-      'parameters':parameters}
-miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(p2)
-print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
-
-parameters = {'min_confidence': 0.3,'min_support'   : 1, 'percentile' : 90}
-p2 = {'name'      : 'type pattern',
-        'pattern' : 'percentile',
-        'columns' : [ 'TV-nonlife', 'Own funds', 'Diversification'],
-      'parameters':parameters}
-miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(p2)
-print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
-
-pattern ={'name'      : 'sum pattern',
-                          'pattern'   : 'sum',
-                          'parameters': {"min_confidence": 0.5,
-                                         "min_support"   : 1,
-                                         "nonzero" : True }}
-miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(pattern)
-print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
+# print(df_patterns.loc[0,'pandas co'])
+#
+# parameters = {'min_confidence': 0.2,'min_support'   : 1, 'nonzero':False}
+# p2 = {'name'      : 'type pattern',
+#         'pattern' : '=',
+#         'value' : '"@"',
+#         # 'columns' : [ 'TV-nonlife', 'Own funds', 'Diversification'],
+#       'parameters':parameters}
+# miner = data_patterns.PatternMiner(df)
+# df_patterns = miner.find(p2)
+# print(df_patterns.to_string())
+# print(df_patterns.loc[0,'pandas co'])
+#
+# parameters = {'min_confidence': 0.3,'min_support'   : 1, 'percentile' : 90}
+# p2 = {'name'      : 'type pattern',
+#         'pattern' : 'percentile',
+#         'columns' : [ 'TV-nonlife', 'Own funds', 'Diversification'],
+#       'parameters':parameters}
+# miner = data_patterns.PatternMiner(df)
+# df_patterns = miner.find(p2)
+# print(df_patterns.to_string())
+# print(df_patterns.loc[0,'pandas co'])
+#
+# pattern ={'name'      : 'sum pattern',
+#                           'pattern'   : 'sum',
+#                           'parameters': {"min_confidence": 0.5,
+#                                          "min_support"   : 1,
+#                                          "nonzero" : True }}
+# miner = data_patterns.PatternMiner(df)
+# df_patterns = miner.find(pattern)
+# print(df_patterns.to_string())
+# print(df_patterns.loc[0,'pandas co'])

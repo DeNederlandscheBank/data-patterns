@@ -129,12 +129,40 @@ def to_xbrl_expressions(pattern, encode, parameters):
     """Placeholder for XBRL"""
     return ["", ""]
 
-def preprocess_pattern(pattern):
+def replace_and_or(s):
+    """Replace and by & and or by |, but not within strings"""
+    if re.search(r"(.*?)\'(.*?)\'(.*)", s) is None: # input text does not contain strings
+        s = s.replace("OR", "|")
+        s = s.replace("AND", "&")
+    for item in re.findall(r"(.*?)\'(.*?)\'(.*)", s):
+        s = s.replace(item[0], item[0].replace("OR", "|"))
+        s = s.replace(item[0], item[0].replace("AND", "&"))
+        s = s.replace(item[2], replace_and_or(item[2]))
+    return s
+
+def replace_div_by_zero(s):
+    """Replace division by adding a smal value to numerator"""
+    item = re.search(r"{(.*?)}(/)({.*?})", s)
+    if item is not None: # input text does not contain strings
+        k = s.rfind("/")
+        s = s[:k] + ".divide(" + s[k+1:].replace(item.group(3), item.group(3) + '.replace([0], -1))')
+    return s
+def preprocess_pattern(pattern, parameters):
+    solvency = parameters.get("solvency", False)
+
     pattern = pattern.replace("=" , "==")
     pattern = pattern.replace(">==" , ">=")
     pattern = pattern.replace("<==" , "<=")
     pattern = pattern.replace('!==', '!=')
+    pattern = pattern.replace("<>", "!=")
+    pattern = pattern.replace("< >", "!=") # the space between < and > should be deleted in EVA2
+    pattern = pattern.replace('"', "'")
+    pattern = pattern.replace(" )", ")")
+    pattern = pattern.replace(';', ",") # this should be corrected in EVA2
 
+    if solvency:
+        pattern = replace_and_or(pattern)
+        pattern = replace_div_by_zero(pattern)
     return pattern
 
 def datapoints2pandas(s, encode):
@@ -189,11 +217,9 @@ def expression2pandas(g, nonzero_col, parameters):
             ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
     else:
         item = re.search(r'(.*)(==)(.*)', g)
-        if item is not None:
-            g_co = 'abs('+ item[1].strip() + '-' + item[3].strip() + ')<1.5e' + str(decimal)
-            g_ex = 'abs(' + item[1].strip() + '-' + item[3].strip() + ')>=1.5e' + str(decimal)
-            co_str = 'df[('+g_co+')&'
-            ex_str = 'df[('+g_ex+')&'
+        if item is None or (isinstance(item.group(3),str) and item.group(3)[:3] != ' df' and item.group(3)[:1] != '{'): # take out strings except when string is from sum
+            co_str = 'df[('+add_brackets(g)+')&'
+            ex_str = 'df[~('+add_brackets(g)+')&'
             if exclude_zero_columns:
                 for i in nonzero_col:
                     co_str += '(' + i +'!=0)&'
@@ -201,8 +227,10 @@ def expression2pandas(g, nonzero_col, parameters):
             co_str = co_str[:-1] + ']'
             ex_str = ex_str[:-1] + ']'
         else:
-            co_str = 'df[('+add_brackets(g)+')&'
-            ex_str = 'df[~('+add_brackets(g)+')&'
+            g_co = 'abs('+ item.group(1).strip() + '-(' + item.group(3).strip() + '))<1.5e' + str(decimal)
+            g_ex = 'abs(' + item.group(1).strip() + '-(' + item.group(3).strip() + '))>=1.5e' + str(decimal)
+            co_str = 'df[('+g_co+')&'
+            ex_str = 'df[('+g_ex+')&'
             if exclude_zero_columns:
                 for i in nonzero_col:
                     co_str += '(' + i +'!=0)&'
