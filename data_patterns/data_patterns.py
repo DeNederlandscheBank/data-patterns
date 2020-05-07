@@ -230,11 +230,13 @@ def get_possible_values(amount, possible_expressions, dataframe):
 
 def add_qoutation(possible_expressions):
     new_expressions = []
+    datapoints = []
     for expression in possible_expressions:
         for datapoint in re.findall(r'{.*?}', expression):
-            if datapoint[1] != '"':
+            if datapoint[1] != '"' and datapoint not in datapoints:
                 d = datapoint[1:-1] # strip {" and "}
-                expression = expression.replace(d, '"' + d +'"',1) # Replace it so that it goes well later
+                expression = expression.replace(d, '"' + d +'"') # Replace it so that it goes well later
+                datapoints.append(datapoint)
         new_expressions.append(expression)
     return new_expressions
 def derive_patterns_from_expression(expression = "",
