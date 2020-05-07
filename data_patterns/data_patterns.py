@@ -228,6 +228,15 @@ def get_possible_values(amount, possible_expressions, dataframe):
                     expressions.append(possible_expression_v)
         return expressions
 
+def add_qoutation(possible_expressions):
+    new_expressions = []
+    for expression in possible_expressions:
+        for datapoint in re.findall(r'{.*?}', expression):
+            if datapoint[1] != '"':
+                d = datapoint[1:-1] # strip {" and "}
+                expression = expression.replace(d, '"' + d +'"') # Replace it so that it goes well later
+        new_expressions.append(expression)
+    return new_expressions
 def derive_patterns_from_expression(expression = "",
                                     metapattern = None,
                                     dataframe = None):
@@ -244,6 +253,7 @@ def derive_patterns_from_expression(expression = "",
     amount_v = expression.count("@") #Amount of column values to be found
 
     possible_expressions = get_possible_columns(amount, expression, dataframe)
+    possible_expressions = add_qoutation(possible_expressions)
     possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe)
 
     for possible_expression in possible_expressions:
