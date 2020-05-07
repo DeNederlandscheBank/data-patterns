@@ -25,11 +25,9 @@ df_patterns = miner.find(p2 )
 print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
 
-parameters = {'min_confidence': 0.2,'min_support'   : 1, 'nonzero':False}
+parameters = {'min_confidence': 0.2,'min_support'   : 1}
 p2 = {'name'      : 'type pattern',
-        'pattern' : '=',
-        'value' : '"@"',
-        'columns' : [ 'TV-nonlife', 'Own funds'],
+    'expression' : '{TV-life} = 0',
       'parameters':parameters}
 miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find(p2)
@@ -44,7 +42,7 @@ p2 = {'name'      : 'type pattern',
 miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find(p2)
 print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
+print(df_patterns.loc[1,'pandas co'])
 
 pattern ={'name'      : 'sum pattern',
                           'pattern'   : 'sum',
@@ -56,10 +54,10 @@ df_patterns = miner.find(pattern)
 print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
 
-parameters = {'min_confidence': 0.2,'min_support'   : 1, 'nonzero':False,'solvency' : True}
+parameters = {'min_confidence': 0.2,'min_support'   : 1}
 
 p2 = {'name'      : 'Pattern 1',
-    'expression' : 'IF ~({TV-life} = 0) THEN ~({TV-nonlife} = 8800)',
+      'expression' : 'IF ({TV-life} = 0) THEN ({TV-nonlife} = 8800) AND IF ~({TV-life} = 0) THEN ~({TV-nonlife} = 8800)',
       'parameters' : parameters }
 
 miner = data_patterns.PatternMiner(df)
