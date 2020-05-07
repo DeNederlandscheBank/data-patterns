@@ -142,8 +142,10 @@ def replace_and_or(s):
 
 def replace_div_by_zero(s):
     """Replace division by adding a smal value to numerator"""
-    item = re.search(r"{(.*?)}(/)({.*?})", s)
+    item = re.search(r"({.*?})(/)({.*?})", s)
+    print(item)
     if item is not None: # input text does not contain strings
+        print(item.group(3))
         k = s.rfind("/")
         s = s[:k] + ".divide(" + s[k+1:].replace(item.group(3), item.group(3) + '.replace([0], -1))')
     return s
