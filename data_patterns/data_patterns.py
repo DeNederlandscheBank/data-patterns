@@ -234,7 +234,7 @@ def add_qoutation(possible_expressions):
         for datapoint in re.findall(r'{.*?}', expression):
             if datapoint[1] != '"':
                 d = datapoint[1:-1] # strip {" and "}
-                expression = expression.replace(d, '"' + d +'"') # Replace it so that it goes well later
+                expression = expression.replace(d, '"' + d +'"',1) # Replace it so that it goes well later
         new_expressions.append(expression)
     return new_expressions
 def derive_patterns_from_expression(expression = "",
