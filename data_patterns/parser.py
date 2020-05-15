@@ -146,7 +146,6 @@ def replace_div_by_zero(s):
     if item is not None: # input text does not contain strings
         k = s.rfind("/")
         s = s[:k] + ".divide(" + s[k+1:].replace(item.group(3), item.group(3) + '.replace([0], -1))')
-    print(s)
     return s
 def preprocess_pattern(pattern, parameters):
     solvency = parameters.get("solvency", False)
@@ -218,7 +217,7 @@ def expression2pandas(g, nonzero_col, parameters):
             ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
     else:
         item = re.search(r'(.*)(==)(.*)', g)
-        if item is None or (isinstance(item.group(3),str) and item.group(3)[:3] != ' df' and item.group(3)[:1] != '{'): # take out strings except when string is from sum
+        if item is None or (isinstance(item.group(3),str) and item.group(3)[:2] != 'df' and item.group(3)[:3]!= ' df' and item.group(3)[:1] != '{'): # take out strings except when string is from sum
             co_str = 'df[('+add_brackets(g)+')&'
             ex_str = 'df[~('+add_brackets(g)+')&'
             if exclude_zero_columns:

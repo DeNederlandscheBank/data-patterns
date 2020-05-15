@@ -73,7 +73,6 @@ class PatternMiner:
         self.__process_parameters(*args, **kwargs)
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
-
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
         if (not kwargs.get('append', False)) or (self.df_patterns is None):
             self.df_patterns = new_df_patterns
@@ -157,6 +156,7 @@ def derive_patterns(dataframe   = None,
         df_patterns = df_patterns.append(patterns, ignore_index = True)
 
     df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
+
     df_patterns[SUPPORT] = df_patterns[SUPPORT].astype(np.int64)
     df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
     df_patterns.index.name = 'index'
@@ -249,6 +249,7 @@ def derive_patterns_from_expression(expression = "",
     encode = metapattern.get(ENCODE, {}) # TO DO
     encodings = get_encodings()
     confidence, support = get_parameters(parameters)
+    solvency = parameters.get('solvency', False)
     patterns = list()
 
     amount = expression.count('.*}') #Amount of columns to be found
@@ -257,7 +258,6 @@ def derive_patterns_from_expression(expression = "",
     possible_expressions = get_possible_columns(amount, expression, dataframe)
     possible_expressions = add_qoutation(possible_expressions)
     possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe)
-
     for possible_expression in possible_expressions:
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
         # print(pandas_expressions)
@@ -267,9 +267,17 @@ def derive_patterns_from_expression(expression = "",
             conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
             if ((conf >= confidence) and (n_co >= support)):
                 xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
-                patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions])
+                patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
+        except TypeError as e:
+            if solvency:
+                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
+            else:
+                continue
         except:
-            continue
+            if solvency:
+                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
+            else:
+                continue
 
     return patterns
 
@@ -510,7 +518,7 @@ def to_dataframe(patterns = None, parameters = {}):
     patterns = list(patterns)
     if len(patterns) > 0:
         data = [pattern_id + [pattern] + pattern_stats + [INITIAL_PATTERN_STATUS] + [{}] +
-               [pandas_co, pandas_ex, xbrl_co, xbrl_ex] for [pattern_id, pattern, pattern_stats, pandas_co, pandas_ex, xbrl_co, xbrl_ex] in patterns]
+               [pandas_co, pandas_ex, xbrl_co, xbrl_ex, error] for [pattern_id, pattern, pattern_stats, pandas_co, pandas_ex, xbrl_co, xbrl_ex, error] in patterns]
         df = pd.DataFrame(data = data, columns = PATTERNS_COLUMNS)
         df.index.name = 'index'
     else:

@@ -23,7 +23,7 @@ PANDAS_CO					= "pandas co"
 PANDAS_EX					= "pandas ex"
 XBRL_CO						= "xbrl co"
 XBRL_EX						= "xbrl ex"
-
+ERROR						= "Error message"
 RESULT_TYPE      	   		= 'result_type'
 INDEX            	   		= "index"
 P_VALUES         	   		= "P values"
@@ -39,10 +39,10 @@ DEFAULT_SHEET_NAME_PATTERNS = 'Patterns'
 SHEET_NAME_POST_CO     		= "_co"
 SHEET_NAME_POST_EX     		= "_ex"
 
-PATTERNS_COLUMNS 	   		= [PATTERN_ID, CLUSTER, 
-					  		   PATTERN_DEF, 
-                    	  	   SUPPORT, EXCEPTIONS, CONFIDENCE, PATTERN_STATUS, ENCODINGS, PANDAS_CO, PANDAS_EX, XBRL_CO, XBRL_EX]
-     
-RESULTS_COLUMNS        		= [RESULT_TYPE, PATTERN_ID, CLUSTER, INDEX, SUPPORT, EXCEPTIONS, CONFIDENCE, 
-                    	  	   PATTERN_DEF, 
+PATTERNS_COLUMNS 	   		= [PATTERN_ID, CLUSTER,
+					  		   PATTERN_DEF,
+                    	  	   SUPPORT, EXCEPTIONS, CONFIDENCE, PATTERN_STATUS, ENCODINGS, PANDAS_CO, PANDAS_EX, XBRL_CO, XBRL_EX, ERROR]
+
+RESULTS_COLUMNS        		= [RESULT_TYPE, PATTERN_ID, CLUSTER, INDEX, SUPPORT, EXCEPTIONS, CONFIDENCE,
+                    	  	   PATTERN_DEF,
                     	  	   P_VALUES, Q_VALUES]
