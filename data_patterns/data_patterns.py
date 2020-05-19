@@ -182,7 +182,19 @@ def get_possible_columns(amount, expression, dataframe):
 
     for datapoint in re.findall(r'{.*?}', expression): # See which columns we are looking for per left open column
         d = datapoint[1:-1] # strip {" and "}
-        all_columns.append([re.search(d, col).group(0) for col in dataframe.columns if re.search(d, col)])
+        if len(d) < 5:
+            all_columns.append([re.search(d, col).group(0) for col in dataframe.columns if re.search(d, col)])
+            print([re.search(d, col).group(0) for col in dataframe.columns if re.search(d, col)])
+        else: # check for multiple options
+            d = d[2:-2]
+            d = d.strip().split(',')
+            columns = []
+            for item in d:
+                item = item + '.*' # needed for regex
+                for col in dataframe.columns:
+                    if re.search(item, col):
+                        columns.append(re.search(item, col).group(0))
+            all_columns.append(columns)
         expression = expression.replace(datapoint, '{.*}', 1) # Replace it so that it goes well later
     if amount > 1: # Combine the lists into combinations where we do not have duplicates
         if re.search('AND', expression):
@@ -239,6 +251,8 @@ def add_qoutation(possible_expressions):
                 datapoints.append(datapoint)
         new_expressions.append(expression)
     return new_expressions
+
+
 def derive_patterns_from_expression(expression = "",
                                     metapattern = None,
                                     dataframe = None):
