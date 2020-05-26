@@ -174,6 +174,18 @@ def derive_patterns_from_template_expression(metapattern = None,
     df_patterns = to_dataframe(patterns = new_list, parameters = parameters)
     return df_patterns
 
+def product(*args, **kwds):
+    # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
+    # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
+    pools = map(tuple, args)
+    result = [[]]
+    for pool in pools:
+        print(pool)
+        result = [x+[y] for x in result for y in pool]
+        print(result)
+    for prod in result:
+        yield tuple(prod)
+
 def get_possible_columns(amount, expression, dataframe):
     if amount == 0:
         return [expression]
@@ -184,7 +196,6 @@ def get_possible_columns(amount, expression, dataframe):
         d = datapoint[1:-1] # strip {" and "}
         if len(d) < 5:
             all_columns.append([re.search(d, col).group(0) for col in dataframe.columns if re.search(d, col)])
-            print([re.search(d, col).group(0) for col in dataframe.columns if re.search(d, col)])
         else: # check for multiple options
             d = d[2:-2]
             d = d.strip().split(',')
@@ -201,6 +212,21 @@ def get_possible_columns(amount, expression, dataframe):
             possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == int(len(p)/2)]
         else:
             possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == len(p)]
+
+        item = re.search(r'(.*)(=)(.*)', expression)
+        if item:
+            if re.search(r'{(.*?)}',item.group(3)):
+                d = {}
+                for t in possibilities:
+                    # Flatten the tuple
+                    flat = itertools.chain.from_iterable(part if isinstance(part,list) else [part]
+                                               for part in t)
+                    maps_to = frozenset(flat) # Sets cannot be used as keys
+                    d[maps_to] = t # Add it to the dict; the most recent addition "survives"
+
+                possibilities = list(d.values())
+                print(possibilities)
+
     elif amount == 1: # If we have one empty spot, then just use the possible values
         possibilities = [[i] for i in all_columns[0]]
 
