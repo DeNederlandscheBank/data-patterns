@@ -213,8 +213,10 @@ def get_possible_columns(amount, expression, dataframe):
         else:
             possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == len(p)]
 
+        # We want to get rid of duplicates results when doing sum pattern or comparing columns, i.e.{x}={y} is the same as {y}={x}
         item = re.search(r'(.*)(=)(.*)', expression)
         if item:
+            # only do this when the righthandside is a column
             if re.search(r'{(.*?)}',item.group(3)):
                 d = {}
                 for t in possibilities:
@@ -225,7 +227,6 @@ def get_possible_columns(amount, expression, dataframe):
                     d[maps_to] = t # Add it to the dict; the most recent addition "survives"
 
                 possibilities = list(d.values())
-                print(possibilities)
 
     elif amount == 1: # If we have one empty spot, then just use the possible values
         possibilities = [[i] for i in all_columns[0]]
