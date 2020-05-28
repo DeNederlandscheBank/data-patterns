@@ -179,7 +179,6 @@ def datapoints2pandas(s, encode):
         else:
             res = res.replace("{"+item+"}", "df["+item+"]")
         nonzero_col.append("df["+item+"]")
-    print(res)
     return res, nonzero_col
 
 def add_brackets(s, decimal = 8):
