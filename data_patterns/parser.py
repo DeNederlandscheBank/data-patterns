@@ -156,11 +156,11 @@ def preprocess_pattern(pattern, parameters):
     pattern = pattern.replace('!==', '!=')
     pattern = pattern.replace("<>", "!=")
     pattern = pattern.replace("< >", "!=") # the space between < and > should be deleted in EVA2
-    pattern = pattern.replace('"', "'")
     pattern = pattern.replace(" )", ")")
     pattern = pattern.replace(';', ",") # this should be corrected in EVA2
 
     if solvency:
+        pattern = pattern.replace('"', "'")
         pattern = replace_and_or(pattern)
         pattern = replace_div_by_zero(pattern)
     return pattern
@@ -184,7 +184,7 @@ def datapoints2pandas(s, encode):
 def add_brackets(s, decimal = 8):
     """Add brackets around expressions with & and |
     """
-    item = re.search(r'(.*)([&|\|])(.*)', s) # & and | takes priority over other functions like ==
+    item = re.search(r'({.*})([&|\|])(.*)', s) # & and | takes priority over other functions like ==
     if item is not None:
         return '('+add_brackets(item.group(1))+') '+item.group(2).strip()+' ('+add_brackets(item.group(3))+')'
     else:
