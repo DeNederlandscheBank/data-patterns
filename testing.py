@@ -13,11 +13,25 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                     ['Insurer  9', 'non-life insurer', 9000,     8800,      0,             200,         200],
                     ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
-
-parameters = {'min_confidence': 0.2,'min_support'   : 1}
+#
+parameters = {'min_confidence': 0.2,'min_support'   : 2}
 
 p2 = {'name'      : 'Pattern 1',
-    'expression' : 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) AND IF ~({.*TV-life.*} = 0) THEN ~({.*TV-nonlife.*} = 8800)',
+    'expression' : '{.*TV.*} = "@"',
+      'parameters' : parameters }
+
+miner = data_patterns.PatternMiner(df)
+df_patterns = miner.find(p2 )
+print(df_patterns.to_string())
+print(df_patterns.loc[0,'pandas co'])
+
+
+parameters = {'min_confidence': 0,'min_support'   : 0}
+
+p2 = {'name'      : 'Pattern 1',
+    'pattern' : '-->',
+    'P_columns' : ['Type', 'TV-life'],
+    'Q_columns': ['TV-nonlife'],
       'parameters' : parameters }
 
 miner = data_patterns.PatternMiner(df)

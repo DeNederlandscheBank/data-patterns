@@ -245,26 +245,22 @@ def get_possible_values(amount, possible_expressions, dataframe):
     else:
         expressions = []
         for possible_expression in possible_expressions:
-            all_columns_v = []
+            all_columns = []
             for item in re.findall(r'.*?@', possible_expression): # See which columns we are looking for per left open column
                 value_col = re.findall("{.*?}", item)[-1] # Get the column that matches the value indicator *@
                 value_col = value_col[2:-2] # strip { and }
-                all_columns_v.append(list(dataframe[value_col].unique()))
+                all_columns.append(value_col)
 
-            if amount > 1: # same with columns
-                possibilities_v = [p for p in itertools.product(*all_columns_v)]
-            else:
-                possibilities_v = [[i] for i in all_columns_v[0]]
+            all_columns_v = dataframe[all_columns].drop_duplicates().to_numpy()
 
-
-            for columns_v in possibilities_v: # Make all combinations without duplicates  of values
+            for columns_v in all_columns_v: # Make all combinations without duplicates  of values
                 possible_expression_v = possible_expression
                 for column_v in columns_v:
                     if isinstance(column_v, str):
                         possible_expression_v = possible_expression_v.replace('"@"', '"'+ column_v +'"', 1) # replace adn add ""
                     else:
                         possible_expression_v = possible_expression_v.replace('"@"', str(column_v), 1) # replace with str
-                    expressions.append(possible_expression_v)
+                expressions.append(possible_expression_v)
         return expressions
 
 def add_qoutation(possible_expressions):
