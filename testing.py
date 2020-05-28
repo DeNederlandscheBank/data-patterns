@@ -25,6 +25,16 @@ df_patterns = miner.find(p2 )
 print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
 
+parameters = {'min_confidence': 0.2,'min_support'   : 2}
+
+p2 = {'name'      : 'Pattern 1',
+    'expression' : 'IF {"S.28.01.01.02,R0140,C0020"} <> 0 & {"S.05.01.01.01,R0130,C0130"}  > 0  THEN {"S.28.01.01.02,R0140,C0030"} > 0',
+      'parameters' : parameters }
+
+miner = data_patterns.PatternMiner(df)
+df_patterns = miner.find(p2 )
+print(df_patterns.to_string())
+print(df_patterns.loc[0,'pandas co'])
 
 parameters = {'min_confidence': 0,'min_support'   : 0}
 
