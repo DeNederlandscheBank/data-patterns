@@ -14,8 +14,8 @@ __email__ = 'ECDB_berichten@dnb.nl'
 __version__ = '0.1.13'
 
 class PatternDataFrame(pd.DataFrame):
-    ''' 
-    A PatternDataframe is a subclass of a Pandas DataFrame for patterns with 
+    '''
+    A PatternDataframe is a subclass of a Pandas DataFrame for patterns with
     a specialized to_excel function to get a readable format
 
     Parameters
@@ -35,20 +35,20 @@ class PatternDataFrame(pd.DataFrame):
 
     '''
 
-    def to_excel(self, filename, *args, **kwargs):
+    def to_excel2(self, filename, *args, **kwargs):
         writer = pd.ExcelWriter(filename, engine = 'xlsxwriter')
         sheet_name = kwargs.pop('sheet_name', DEFAULT_SHEET_NAME_PATTERNS)
-        font = writer.book.add_format({'font_name': 'Arial', 
-                                       'font_size': 10, 
-                                       'valign'   : 'top', 
-                                       'align'    : 'left', 
+        font = writer.book.add_format({'font_name': 'Arial',
+                                       'font_size': 10,
+                                       'valign'   : 'top',
+                                       'align'    : 'left',
                                        'text_wrap': True})
         if not self.empty:
             df = super(PatternDataFrame, self).copy()
             # make sure that the '='-sign is read properly by Excel
             #df[RELATION_TYPE] = "'" + df[RELATION_TYPE]
-            df.to_excel(writer, 
-                        sheet_name = sheet_name, 
+            df.to_excel(writer,
+                        sheet_name = sheet_name,
                         merge_cells = False, *args, **kwargs)
         else:
             print("Empty patterns dataframe. No patterns to export.")
@@ -75,8 +75,8 @@ class PatternDataFrame(pd.DataFrame):
         return None
 
 class ResultDataFrame(pd.DataFrame):
-    ''' 
-    A ResultDataframe is a subclass of a Pandas DataFrame for patterns results with 
+    '''
+    A ResultDataframe is a subclass of a Pandas DataFrame for patterns results with
     a specialized to_excel function to get a readable format
 
     Parameters
@@ -96,12 +96,12 @@ class ResultDataFrame(pd.DataFrame):
 
     '''
 
-    def to_excel(self, filename, *args, **kwargs):
+    def to_excel2(self, filename, *args, **kwargs):
         writer = pd.ExcelWriter(filename, engine = 'xlsxwriter')
-        font = writer.book.add_format({'font_name': 'Arial', 
-                                       'font_size': 10, 
-                                       'valign'   : 'top', 
-                                       'align'    : 'left', 
+        font = writer.book.add_format({'font_name': 'Arial',
+                                       'font_size': 10,
+                                       'valign'   : 'top',
+                                       'align'    : 'left',
                                        'text_wrap': True})
         if not self.empty:
             for pattern_id in self[PATTERN_ID].unique().sort():
