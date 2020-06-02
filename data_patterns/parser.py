@@ -156,7 +156,6 @@ def preprocess_pattern(pattern, parameters):
     pattern = pattern.replace('!==', '!=')
     pattern = pattern.replace("<>", "!=")
     pattern = pattern.replace("< >", "!=") # the space between < and > should be deleted in EVA2
-    pattern = pattern.replace(" )", ")")
     pattern = pattern.replace(';', ",") # this should be corrected in EVA2
 
     if solvency:

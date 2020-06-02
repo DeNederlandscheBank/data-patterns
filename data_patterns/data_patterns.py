@@ -296,7 +296,7 @@ def derive_patterns_from_expression(expression = "",
     possible_expressions = add_qoutation(possible_expressions)
     possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe)
     for possible_expression in possible_expressions:
-        # print(possible_expression)
+        print(possible_expression)
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
         # print(pandas_expressions)
         try: # Some give error so we use try

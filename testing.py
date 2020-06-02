@@ -11,7 +11,8 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                     ['Insurer  7', 'life insurer',     9000,     8800,      0,             200,         200],
                     ['Insurer  8', 'life insurer',     9000,     8800,      0,             200,         200],
                     ['Insurer  9', 'non-life insurer', 9000,     8800,      0,             200,         200],
-                    ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
+                    ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99],
+                    ['ddssd', 'AEGON Direct Non (Thailand ) Limited (LEI/213800NLLWGM5Z858M59)', 9000, 0, 8800, 200, 200]])
 df.set_index('Name', inplace = True)
 #
 parameters = {'min_confidence': 0.2,'min_support'   : 2}
