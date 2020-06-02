@@ -26,19 +26,19 @@ print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
 
 
-# parameters = {'min_confidence': 0,'min_support'   : 0}
-#
-# p2 = {'name'      : 'Pattern 1',
-#     'pattern' : '-->',
-#     'P_columns' : ['Type', 'TV-life'],
-#     'Q_columns': ['TV-nonlife'],
-#       'parameters' : parameters ,
-#       'encode': {c: 'EEA_country' for c in  ['TV-nonlife']}}
-#
-# miner = data_patterns.PatternMiner(df)
-# df_patterns = miner.find(p2 )
-# print(df_patterns.to_string())
-# print(df_patterns.loc[0,'pandas co'])
+parameters = {'min_confidence': 0,'min_support'   : 0}
+
+p2 = {'name'      : 'Pattern 1',
+    'pattern' : '-->',
+    'P_columns' : ['Type', 'TV-life'],
+    'Q_columns': ['TV-nonlife'],
+      'parameters' : parameters ,
+      'encode': {c: 'percentage' for c in  ['TV-nonlife']}}
+
+miner = data_patterns.PatternMiner(df)
+df_patterns = miner.find(p2 )
+print(df_patterns.to_string())
+print(df_patterns.loc[0,'pandas co'])
 #
 
 

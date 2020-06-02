@@ -13,17 +13,17 @@ encodings_definitions = {
 
 'percentage': 'def percentage(c):\n\
     if not isinstance(c, pd.Series):\n\
-        return ["= 100%" if i == 1 else\n\
-                "= 50%"  if i == 0.5 else\n\
-                "= 0%"   if i == 0 else\n\
-                "< 50%"  if i < 0.5 and i != 0 else\n\
-                "> 50%"  if i > 0.5 and i != 1 else "unknown" for i in c]\n\
+        return ["100%" if i == 1 else\n\
+                "50%"  if i == 0.5 else\n\
+                "0%"   if i == 0 else\n\
+                "<50%"  if i < 0.5 and i != 0 else\n\
+                ">50%"  if i > 0.5 and i != 1 else "unknown" for i in c]\n\
     else:\n\
-        return pd.Series(index = c.index, data = ["= 100%" if i == 1 else\n\
-                "= 50%"  if i == 0.5 else\n\
-                "= 0%"   if i == 0 else\n\
-                "< 50%"  if i < 0.5 and i != 0 else\n\
-                "> 50%"  if i > 0.5 and i != 1 else "unknown" for i in c])',
+        return pd.Series(index = c.index, data = ["100%" if i == 1 else\n\
+                "50%"  if i == 0.5 else\n\
+                "0%"   if i == 0 else\n\
+                "<50%"  if i < 0.5 and i != 0 else\n\
+                ">50%"  if i > 0.5 and i != 1 else "unknown" for i in c])',
 
 'reported': 'def reported(c):\n\
     if not isinstance(c, pd.Series):\n\
