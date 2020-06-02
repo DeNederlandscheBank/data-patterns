@@ -184,7 +184,7 @@ def add_brackets(s, decimal = 8):
     """Add brackets around expressions with & and |
     """
 
-    item = re.search(r'(.*)([&|\|])(\s*[(| ]df.*)', s)
+    item = re.search(r'(.*)([&|\|])(\s*[(df|df].*)', s)
     if item is not None:
         return '('+add_brackets(item.group(1))+') '+item.group(2).strip()+' ('+add_brackets(item.group(3))+')'
     else:

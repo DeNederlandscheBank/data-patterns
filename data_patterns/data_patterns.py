@@ -298,7 +298,7 @@ def derive_patterns_from_expression(expression = "",
     for possible_expression in possible_expressions:
         # print(possible_expression)
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
-        print(pandas_expressions)
+        # print(pandas_expressions)
         try: # Some give error so we use try
             n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
             n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
