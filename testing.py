@@ -11,34 +11,36 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                     ['Insurer  7', 'life insurer',     9000,     8800,      0,             200,         200],
                     ['Insurer  8', 'life insurer',     9000,     8800,      0,             200,         200],
                     ['Insurer  9', 'non-life insurer', 9000,     8800,      0,             200,         200],
-                    ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99],
-                    ['ddssd', 'AEGON Direct Non (Thailand ) Limited (LEI/213800NLLWGM5Z858M59)', 9000, 0, 8800, 200, 200]])
+                    ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
 #
-parameters = {'min_confidence': 0.2,'min_support'   : 2}
-
-p2 = {'name'      : 'Pattern 1',
-    'expression' : '{.*Ty.*} = "life & insurer"',
-      'parameters' : parameters }
-
-miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(p2 )
-print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
-
-
 parameters = {'min_confidence': 0,'min_support'   : 0}
 
 p2 = {'name'      : 'Pattern 1',
-    'pattern' : '-->',
-    'P_columns' : ['Type', 'TV-life'],
-    'Q_columns': ['TV-nonlife'],
+    'expression' : 'IF {.*Ty.*} = "life & insurer" | {.*As.*} > 0 THEN {.*Excess.*} > 0',
       'parameters' : parameters }
 
 miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find(p2 )
 print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
+
+
+# parameters = {'min_confidence': 0,'min_support'   : 0}
+#
+# p2 = {'name'      : 'Pattern 1',
+#     'pattern' : '-->',
+#     'P_columns' : ['Type', 'TV-life'],
+#     'Q_columns': ['TV-nonlife'],
+#       'parameters' : parameters ,
+#       'encode': {c: 'EEA_country' for c in  ['TV-nonlife']}}
+#
+# miner = data_patterns.PatternMiner(df)
+# df_patterns = miner.find(p2 )
+# print(df_patterns.to_string())
+# print(df_patterns.loc[0,'pandas co'])
+#
+
 
 # parameters = {'min_confidence': 0,'min_support'   : 0}
 # p2 = {'name'      : 'type pattern',

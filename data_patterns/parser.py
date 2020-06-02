@@ -183,19 +183,16 @@ def datapoints2pandas(s, encode):
 def add_brackets(s, decimal = 8):
     """Add brackets around expressions with & and |
     """
-    item = re.search(r'(.*)([\|])(.*)', s) # & and | takes priority over other functions like ==
+
+    item = re.search(r'(.*)([&|\|])(\s*[(| ]df.*)', s)
     if item is not None:
         return '('+add_brackets(item.group(1))+') '+item.group(2).strip()+' ('+add_brackets(item.group(3))+')'
     else:
-        item = re.search(r'(.*)(&)(\s*[(| ]df.*)', s)
+        item = re.search(r'(.*)([>|<|!=|<=|>=|==])(.*)', s)
         if item is not None:
-            return '('+add_brackets(item.group(1))+') '+item.group(2).strip()+' ('+add_brackets(item.group(3))+')'
+            return add_brackets(item.group(1)) + item.group(2).strip() + add_brackets(item.group(3))
         else:
-            item = re.search(r'(.*)([>|<|!=|<=|>=|==])(.*)', s)
-            if item is not None:
-                return add_brackets(item.group(1)) + item.group(2).strip() + add_brackets(item.group(3))
-            else:
-                return s.strip()
+            return s.strip()
 
 def expression2pandas(g, nonzero_col, parameters):
     """Transform conditional expression to Pandas code"""
