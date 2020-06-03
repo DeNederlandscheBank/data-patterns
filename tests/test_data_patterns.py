@@ -261,17 +261,17 @@ class TestData_patterns(unittest.TestCase):
         df.set_index('Name', inplace = True)
         parameters = {'min_confidence': 0.5,'min_support'   : 2}
         p2 = {'name'      : 'Pattern 1',
-            'expression' : 'IF ({.*Ty.*} != "@") THEN ({.*.*} = "@")'}
+            'expression' : 'IF ({.*Ty.*} = "@") THEN ({.*.*} = "@")'}
         # Expected output
         expected = pd.DataFrame(columns = ['index','pattern_id', 'cluster', 'pattern_def', 'support', 'exceptions',
                                     'confidence'],
-                                data = [[0,'Pattern 1', 0, 'IF ({"Type"} != "life insurer") THEN ({"TV-life"} = 0)',
+                                data = [[0,'Pattern 1', 0, 'IF ({"Type"} = "non-life insurer") THEN ({"TV-life"} = 0)',
                                 4, 1, 0.8],
-                                [1,'Pattern 1', 0, 'IF ({"Type"} != "non-life insurer") THEN ({"TV-nonlife"} = 0)',
+                                [1,'Pattern 1', 0, 'IF ({"Type"} = "life insurer") THEN ({"TV-nonlife"} = 0)',
                                 5, 0, 1.0],
-                                [2,'Pattern 1', 0, 'IF ({"Type"} != "non-life insurer") THEN ({"Own funds"} = 200)',
+                                [2,'Pattern 1', 0, 'IF ({"Type"} = "life insurer") THEN ({"Own funds"} = 200)',
                                 4, 1, 0.8],
-                                [3,'Pattern 1', 0, 'IF ({"Type"} != "non-life insurer") THEN ({"Excess"} = 200.0)',
+                                [3,'Pattern 1', 0, 'IF ({"Type"} = "life insurer") THEN ({"Excess"} = 200.0)',
                                 4, 1, 0.8]])
         expected.set_index('index', inplace = True)
         expected = data_patterns.PatternDataFrame(expected)

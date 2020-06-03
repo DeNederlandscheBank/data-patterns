@@ -251,8 +251,9 @@ def get_possible_values(amount, possible_expressions, dataframe):
                 value_col = value_col[2:-2] # strip { and }
                 all_columns.append(value_col)
 
+            # print(all_columns)
             all_columns_v = dataframe[all_columns].drop_duplicates().to_numpy()
-
+            # print(all_columns_v)
             for columns_v in all_columns_v: # Make all combinations without duplicates  of values
                 possible_expression_v = possible_expression
                 for column_v in columns_v:
