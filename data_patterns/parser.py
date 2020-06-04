@@ -174,7 +174,7 @@ def datapoints2pandas(s, encode):
     res = s
     for item in re.findall(r'{(.*?)}', res):
         if item[1:-1] in encode.keys():
-            res = res.replace("{"+item+"}", encode[item[1:-1]] + "(df["+item+"])")
+            res = res.replace("{"+item+"}", '('+ encode[item[1:-1]] + "(df["+item+"]))")
         else:
             res = res.replace("{"+item+"}", "df["+item+"]")
         nonzero_col.append("df["+item+"]")

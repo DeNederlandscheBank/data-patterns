@@ -282,18 +282,30 @@ def derive_patterns_from_expression(expression = "",
 
     amount = expression.count('.*}') #Amount of columns to be found
     amount_v = expression.count("@") #Amount of column values to be found
+    if metapattern.get('expression', None):
+        df_features = dataframe.copy()
+        # execute dynamic encoding functions
+        if encode != {}:
+            for c in df_features.columns:
+                if c in encode.keys():
+                    df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
+        dataframe2 = df_features
 
-    possible_expressions = get_possible_columns(amount, expression, dataframe)
+    else:
+        dataframe2 = dataframe
+
+    possible_expressions = get_possible_columns(amount, expression, dataframe2)
     possible_expressions = add_qoutation(possible_expressions)
-    possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe)
+    possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe2)
     for possible_expression in possible_expressions:
         # print(possible_expression)
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
-        # print(pandas_expressions)
+        print(pandas_expressions)
         try: # Some give error so we use try
             n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
             n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
             conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
+            print(n_co,n_ex)
             if ((conf >= confidence) and (n_co >= support)):
                 xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
                 patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
@@ -378,7 +390,7 @@ def derive_conditional_pattern(dataframe = None,
         for c in df_features.columns:
             if c in encode.keys():
                 df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
-    if encode != {}: # only use when P value is not given
+    if encode != {}:
         expressions = []
         df_features = df_features.drop_duplicates(P_columns + Q_columns)
         for idx in range(len(df_features.index)):
