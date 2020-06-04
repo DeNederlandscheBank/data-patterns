@@ -349,7 +349,6 @@ def derive_patterns_from_code(metapattern = None,
 
 
         patterns = possible_expressions
-        print(patterns)
     df_patterns = to_dataframe(patterns = patterns, parameters = parameters)
     return df_patterns
 
