@@ -198,7 +198,7 @@ class TestData_patterns(unittest.TestCase):
                                 [2,'sum pattern', 0, '({"TV-nonlife"} + {"Own funds"} = {"Assets"})',
                                 3, 1, 0.75],
                                 [3,'sum pattern', 0, '({"TV-nonlife"} + {"Excess"} = {"Assets"})',
-                                2, 2, 0.50]])
+                                3, 1, 0.75]])
         expected.set_index('index', inplace = True)
         expected = data_patterns.PatternDataFrame(expected)
 

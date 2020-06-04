@@ -289,7 +289,7 @@ def derive_patterns_from_expression(expression = "",
     for possible_expression in possible_expressions:
         # print(possible_expression)
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
-        print(pandas_expressions)
+        # print(pandas_expressions)
         try: # Some give error so we use try
             n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
             n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
@@ -333,7 +333,8 @@ def derive_patterns_from_code(metapattern = None,
 
     if pattern == '-->':
         possible_expressions = derive_conditional_pattern(metapattern = metapattern, dataframe = dataframe)
-
+        for expression in possible_expressions:
+            patterns.extend(derive_patterns_from_expression(expression, metapattern, dataframe))
     # everything else -> c1 pattern c2
     else:
         possible_expressions = derive_quantitative_pattern(
@@ -347,9 +348,8 @@ def derive_patterns_from_code(metapattern = None,
                                         parameters = parameters)
 
 
-    for expression in possible_expressions:
-        patterns.extend(derive_patterns_from_expression(expression, metapattern, dataframe))
-
+        patterns = possible_expressions
+        print(patterns)
     df_patterns = to_dataframe(patterns = patterns, parameters = parameters)
     return df_patterns
 
@@ -444,15 +444,15 @@ def derive_quantitative_pattern(metapattern = None,
         columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
     else:
         columns = range(len(dataframe.columns))
-        
+
     data_array = dataframe.values.T
     patterns = list()
     if value is not None:
         for c in columns:
             # confirmations and exceptions of the pattern, a list of booleans
             try:
-                pattern_def = generate_single_expression([dataframe.columns[c]], value, pattern)
-                patterns.append(pattern_def)
+                possible_expression = generate_single_expression([dataframe.columns[c]], value, pattern)
+                patterns.extend(derive_patterns_from_expression(possible_expression, metapattern, dataframe))
             except:
                 continue
 
@@ -466,8 +466,8 @@ def derive_quantitative_pattern(metapattern = None,
                 lower = round(np.percentile(data_array[c, :], add_per),2)
 
                 # confirmations and exceptions of the pattern, a list of booleans
-                pattern_def = generate_single_expression([dataframe.columns[c]], [lower, upper], pattern)
-                patterns.append(pattern_def)
+                possible_expression = generate_single_expression([dataframe.columns[c]], [lower, upper], pattern)
+                patterns.extend(derive_patterns_from_expression(possible_expression, metapattern, dataframe))
             except:
                 continue
 
@@ -477,7 +477,9 @@ def derive_quantitative_pattern(metapattern = None,
                                  P_columns  = P_columns,
                                  Q_columns  = Q_columns,
                                  parameters = parameters)
-        patterns = [pat for pat in sums]
+        for pat in sums:
+            patterns.extend(pat)
+
     elif pattern == 'ratio':
         # TO DO
         return
@@ -488,8 +490,29 @@ def derive_quantitative_pattern(metapattern = None,
                                  P_columns  = P_columns,
                                  Q_columns  = Q_columns,
                                  parameters = parameters)
-        patterns = [pat for pat in compares]
+        for pat in compares:
+            patterns.extend(pat)
     return patterns
+
+operators = {'>' : operator.gt,
+         '<' : operator.lt,
+         '>=': operator.ge,
+         '<=': operator.le,
+         '=' : operator.eq,
+         '!=': operator.ne,
+         '<->': logical_equivalence,
+         '-->': logical_implication}
+
+def derive_pattern_statistics(co):
+    # co_sum is the support of the pattern
+    co_sum = co.sum()
+    #co_sum = optimized.apply_sum(co)
+    ex_sum = len(co) - co_sum
+    # conf is the confidence of the pattern
+    conf = np.round(co_sum / (co_sum + ex_sum), 4)
+    # oddsratio is a correlation measure
+    #oddsratio = (1 + co_sum) / (1 + ex_sum)
+    return co_sum, ex_sum, conf #, oddsratio
 
 def patterns_column_column(dataframe  = None,
                            pattern    = None,
@@ -504,14 +527,6 @@ def patterns_column_column(dataframe  = None,
     initial_data_array = dataframe.values.T
     # set up boolean masks for nonzero items per column
     nonzero = initial_data_array != 0
-    operators = {'>' : operator.gt,
-             '<' : operator.lt,
-             '>=': operator.ge,
-             '<=': operator.le,
-             '=' : operator.eq,
-             '!=': operator.ne,
-             '<->': logical_equivalence,
-             '-->': logical_implication}
     preprocess_operator = preprocess[pattern]
 
     for c0 in P_columns:
@@ -522,8 +537,17 @@ def patterns_column_column(dataframe  = None,
                 if data_filter.any():
                     data_array = initial_data_array[:, data_filter]
                     if data_array.any():
-                        pattern_def = generate_single_expression([dataframe.columns[c0]], [dataframe.columns[c1]], pattern)
-                        yield pattern_def
+                        if pattern == "=":
+                            co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
+                        else:
+                            co = reduce(operators[pattern], data_array[[c0, c1], :])
+                        co_sum, ex_sum, conf = derive_pattern_statistics(co)
+                        if (conf >= confidence) and (co_sum >= support):
+                            possible_expression = generate_single_expression([dataframe.columns[c0]], [dataframe.columns[c1]], pattern)
+                            pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
+                            xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
+                            pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
+                            yield pattern_data
 
 def patterns_sums_column( dataframe  = None,
                          pattern_name = None,
@@ -560,8 +584,16 @@ def patterns_sums_column( dataframe  = None,
                 all_columns = lhs_columns + (rhs_column,)
                 data_filter = np.logical_and.reduce(nonzero[all_columns, :])
                 if data_filter.any():
-                    pattern_def = generate_single_expression([dataframe.columns[c] for c in lhs_columns], [dataframe.columns[rhs_column]], 'sum')
-                    yield pattern_def
+                    data_array = start_array[:, data_filter]
+                    co = (abs(np.sum(data_array[all_columns, :], axis = 0)) < 1.5 * 10**(-decimal))
+                    co_sum, ex_sum, conf = derive_pattern_statistics(co)
+                    # we only store the patterns that satisfy criteria
+                    if (conf >= confidence) and (co_sum >= support):
+                        possible_expression = generate_single_expression([dataframe.columns[c] for c in lhs_columns], [dataframe.columns[rhs_column]], 'sum')
+                        pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
+                        xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
+                        pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
+                        yield pattern_data
 
 def derive_ratio_pattern(dataframe  = None,
                    pattern_name = None,
