@@ -411,8 +411,6 @@ def derive_quantitative_pattern(metapattern = None,
                                 parameters = {}):
 
     confidence, support = get_parameters(parameters)
-    data_array = dataframe.values.T
-    patterns = list()
     decimal = parameters.get("decimal", 8)
     P_dataframe = metapattern.get("P_dataframe", None)
     Q_dataframe = metapattern.get("Q_dataframe", None)
@@ -429,7 +427,7 @@ def derive_quantitative_pattern(metapattern = None,
 
     # select all columns with numerical values
     numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns))
-                            if ((dataframe.dtypes[c] == 'float64') or (dataframe.dtypes[c] == 'int64')) and (dataframe.iloc[:, c] != 0).any()]
+                            if ((dataframe.dtypes[c] == 'float64') or (dataframe.dtypes[c] == 'int64'))]
     dataframe = dataframe[numerical_columns]
 
     if P_columns is not None:
@@ -446,7 +444,9 @@ def derive_quantitative_pattern(metapattern = None,
         columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
     else:
         columns = range(len(dataframe.columns))
-
+        
+    data_array = dataframe.values.T
+    patterns = list()
     if value is not None:
         for c in columns:
             # confirmations and exceptions of the pattern, a list of booleans
