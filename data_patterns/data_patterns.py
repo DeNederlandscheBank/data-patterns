@@ -174,17 +174,7 @@ def derive_patterns_from_template_expression(metapattern = None,
     df_patterns = to_dataframe(patterns = new_list, parameters = parameters)
     return df_patterns
 
-def product(*args, **kwds):
-    # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
-    # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
-    pools = map(tuple, args)
-    result = [[]]
-    for pool in pools:
-        print(pool)
-        result = [x+[y] for x in result for y in pool]
-        print(result)
-    for prod in result:
-        yield tuple(prod)
+
 
 def get_possible_columns(amount, expression, dataframe):
     if amount == 0:
@@ -299,7 +289,7 @@ def derive_patterns_from_expression(expression = "",
     for possible_expression in possible_expressions:
         # print(possible_expression)
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
-        # print(pandas_expressions)
+        print(pandas_expressions)
         try: # Some give error so we use try
             n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
             n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
@@ -340,28 +330,14 @@ def derive_patterns_from_code(metapattern = None,
     parameters = metapattern.get("parameters", {})
 
 
-    if P_columns is not None:
-        P_columns = [dataframe.columns.get_loc(c) for c in P_columns]
-    else:
-        P_columns = range(len(dataframe.columns))
-
-    if Q_columns is not None:
-        Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns]
-    else:
-        Q_columns = range(len(dataframe.columns))
-
-    if columns is not None:
-        columns = [dataframe.columns.get_loc(c) for c in columns]
-    else:
-        columns = range(len(dataframe.columns))
-
 
     if pattern == '-->':
         possible_expressions = derive_conditional_pattern(metapattern = metapattern, dataframe = dataframe)
 
     # everything else -> c1 pattern c2
     else:
-        possible_expressions = derive_quantitative_pattern(dataframe = dataframe,
+        possible_expressions = derive_quantitative_pattern(
+        metapattern = metapattern, dataframe = dataframe,
                                         pattern = pattern,
                                         pattern_name = pattern_name,
                                          P_columns = P_columns,
@@ -424,7 +400,8 @@ def get_parameters(parameters):
     support = parameters.get("min_support", 2)
     return confidence, support
 
-def derive_quantitative_pattern(dataframe = None,
+def derive_quantitative_pattern(metapattern = None,
+                                dataframe = None,
                                 pattern = None,
                                 pattern_name = "quantitative",
                                  P_columns = None,
@@ -437,6 +414,38 @@ def derive_quantitative_pattern(dataframe = None,
     data_array = dataframe.values.T
     patterns = list()
     decimal = parameters.get("decimal", 8)
+    P_dataframe = metapattern.get("P_dataframe", None)
+    Q_dataframe = metapattern.get("Q_dataframe", None)
+
+    if (P_dataframe is not None) and (Q_dataframe is not None):
+        try:
+            dataframe = P_dataframe.join(Q_dataframe)
+        except:
+            logger.error("Join of P_dataframe and Q_dataframe failed, overlapping columns?")
+            return []
+        P_columns = P_dataframe.columns
+        Q_columns = Q_dataframe.columns
+
+
+    # select all columns with numerical values
+    numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns))
+                            if ((dataframe.dtypes[c] == 'float64') or (dataframe.dtypes[c] == 'int64')) and (dataframe.iloc[:, c] != 0).any()]
+    dataframe = dataframe[numerical_columns]
+
+    if P_columns is not None:
+        P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
+    else:
+        P_columns = range(len(dataframe.columns))
+
+    if Q_columns is not None:
+        Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
+    else:
+        Q_columns = range(len(dataframe.columns))
+
+    if columns is not None:
+        columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
+    else:
+        columns = range(len(dataframe.columns))
 
     if value is not None:
         for c in columns:
@@ -463,40 +472,96 @@ def derive_quantitative_pattern(dataframe = None,
                 continue
 
     elif pattern == 'sum':
-        sum_elements = parameters.get("sum_elements", 2)
-        preprocess_operator = preprocess["sum"]
-        nonzero = (dataframe.values != 0).T
-        for lhs_elements in range(2, sum_elements + 1):
-            for rhs_column in Q_columns:
-                start_array = data_array
-                # minus righthandside is taken so we can use sum function for all columns
-                try:
-                    start_array[rhs_column, :] = -start_array[rhs_column, :]
-                except:
-                    continue
-                lhs_column_list = [col for col in P_columns if (col != rhs_column)]
-                for lhs_columns in itertools.combinations(lhs_column_list, lhs_elements):
-                            pattern_def = generate_single_expression([dataframe.columns[c] for c in lhs_columns], [dataframe.columns[rhs_column]], pattern)
-                            patterns.append(pattern_def)
-
+        sums = patterns_sums_column(dataframe  = dataframe,
+                                 pattern_name = pattern_name,
+                                 P_columns  = P_columns,
+                                 Q_columns  = Q_columns,
+                                 parameters = parameters)
+        patterns = [pat for pat in sums]
     elif pattern == 'ratio':
         # TO DO
         return
     else:
-        preprocess_operator = preprocess[pattern]
-        for c0 in P_columns:
-            for c1 in Q_columns:
-                if c0 != c1:
-                    # applying the filter
-                    try:
-                        pattern_def = generate_single_expression([dataframe.columns[c0]], [dataframe.columns[c1]], pattern)
-                        patterns.append(pattern_def)
-                    except:
-                        continue
+        compares = patterns_column_column(dataframe  = dataframe,
+                                pattern = pattern,
+                                 pattern_name = pattern_name,
+                                 P_columns  = P_columns,
+                                 Q_columns  = Q_columns,
+                                 parameters = parameters)
+        patterns = [pat for pat in compares]
     return patterns
 
+def patterns_column_column(dataframe  = None,
+                           pattern    = None,
+                           pattern_name = "column",
+                           P_columns  = None,
+                           Q_columns  = None,
+                           parameters = {}):
+    '''Generate patterns of the form [c1] operator [c2] where c1 and c2 are in columns
+    '''
+    confidence, support = get_parameters(parameters)
+    decimal = parameters.get("decimal", 8)
+    initial_data_array = dataframe.values.T
+    # set up boolean masks for nonzero items per column
+    nonzero = initial_data_array != 0
+    operators = {'>' : operator.gt,
+             '<' : operator.lt,
+             '>=': operator.ge,
+             '<=': operator.le,
+             '=' : operator.eq,
+             '!=': operator.ne,
+             '<->': logical_equivalence,
+             '-->': logical_implication}
+    preprocess_operator = preprocess[pattern]
 
+    for c0 in P_columns:
+        for c1 in Q_columns:
+            if c0 != c1:
+                # applying the filter
+                data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
+                if data_filter.any():
+                    data_array = initial_data_array[:, data_filter]
+                    if data_array.any():
+                        pattern_def = generate_single_expression([dataframe.columns[c0]], [dataframe.columns[c1]], pattern)
+                        yield pattern_def
 
+def patterns_sums_column( dataframe  = None,
+                         pattern_name = None,
+                         P_columns  = None,
+                         Q_columns  = None,
+                         parameters = {}):
+    '''Generate patterns of the form sum [c1-list] = [c2] where c1-list is column list and c2 is column
+    '''
+    confidence, support = get_parameters(parameters)
+    sum_elements = parameters.get("sum_elements", 2)
+    decimal = parameters.get("decimal", 0)
+    initial_data_array = dataframe.values.T
+    # set up boolean masks for nonzero items per column
+    nonzero = (dataframe.values != 0).T
+    n = len(dataframe.columns)
+    # setup matrix to speed up proces (under development)
+    # matrix = np.ones(shape = (n, n), dtype = bool)
+    # for c in itertools.combinations(range(n), 2):
+    #     v = (data_array[c[1], :] <= data_array[c[0], :] + 1).any() # all is too strict
+    #     matrix[c[0], c[1]] = v
+    #     matrix[c[1], c[0]] = ~v
+    # np.fill_diagonal(matrix, False)
+
+    for lhs_elements in range(2, sum_elements + 1):
+        for rhs_column in Q_columns:
+            start_array = initial_data_array
+            # minus righthandside is taken so we can use sum function for all columns
+            try:
+                start_array[rhs_column, :] = -start_array[rhs_column, :]
+            except:
+                continue
+            lhs_column_list = [col for col in P_columns if (col != rhs_column)]
+            for lhs_columns in itertools.combinations(lhs_column_list, lhs_elements):
+                all_columns = lhs_columns + (rhs_column,)
+                data_filter = np.logical_and.reduce(nonzero[all_columns, :])
+                if data_filter.any():
+                    pattern_def = generate_single_expression([dataframe.columns[c] for c in lhs_columns], [dataframe.columns[rhs_column]], 'sum')
+                    yield pattern_def
 
 def derive_ratio_pattern(dataframe  = None,
                    pattern_name = None,
