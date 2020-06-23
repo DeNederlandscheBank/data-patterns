@@ -503,6 +503,8 @@ def derive_quantitative_pattern(metapattern = None,
                                  parameters = parameters)
         for pat in compares:
             patterns.extend(pat)
+
+
     return patterns
 
 operators = {'>' : operator.gt,
@@ -539,7 +541,8 @@ def patterns_column_column(dataframe  = None,
     # set up boolean masks for nonzero items per column
     nonzero = initial_data_array != 0
     preprocess_operator = preprocess[pattern]
-
+    if pattern == "=":
+        duplicates = {}
     for c0 in P_columns:
         for c1 in Q_columns:
             if c0 != c1:
@@ -550,6 +553,13 @@ def patterns_column_column(dataframe  = None,
                     if data_array.any():
                         if pattern == "=":
                             co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
+                            if c0 in duplicates:
+                                if c1 in duplicates[c0]:
+                                    continue
+                                else:
+                                    duplicates[c1].append(c0)
+                            else:
+                                duplicates[c1] = [c0]
                         else:
                             co = reduce(operators[pattern], data_array[[c0, c1], :])
                         co_sum, ex_sum, conf = derive_pattern_statistics(co)

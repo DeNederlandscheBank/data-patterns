@@ -199,7 +199,7 @@ def expression2pandas(g, nonzero_col, parameters):
 
     exclude_zero_columns = parameters.get("nonzero", False)
     both_ways = parameters.get("both_ways", False)
-    decimal = parameters.get("decimal", 8)
+    decimal = parameters.get("decimal", 0)
     if re.search('AND IF', g):
         both_ways = True
     if decimal != 0:
@@ -227,6 +227,7 @@ def expression2pandas(g, nonzero_col, parameters):
             co_str = co_str[:-1] + ']'
             ex_str = ex_str[:-1] + ']'
         else:
+            # decimal = parameters.get("decimal", 0)
             g_co = 'abs('+ item.group(1).strip() + '-(' + item.group(3).strip() + '))<1.5e' + str(decimal)
             g_ex = 'abs(' + item.group(1).strip() + '-(' + item.group(3).strip() + '))>=1.5e' + str(decimal)
             co_str = 'df[('+g_co+')&'
