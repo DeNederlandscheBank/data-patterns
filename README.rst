@@ -79,6 +79,23 @@ The result is a DataFrame with the patterns that were found. The first part of t
 
 The miner finds two patterns; the first states that the 'Own funds'-column is identical to the 'Excess'-column in 9 of the 10 cases (with a confidence of 90 %, there is one case where the equal-pattern does not hold), and the second pattern is identical to the first but with the columns reversed.
 
+We can also find patterns using expressions::
+
+    df_patterns = miner.find({'name'      : 'equal values', 
+                              'expression'   : '{.*.*}={.*.*}',
+                              'parameters': {"min_confidence": 0.5,
+                                             "min_support"   : 2}})
+                                             
+This will give the same result.
+
+Expressions can be written as followed:
+
+1. Put it in a structure like above
+2. Columns are given with '{}', example: '{Assests} > 0'
+3. If you want to find matches with columns you can do '{.*.*}' (this will match all columns), example: '{.*TV.*} > 0' (will match TV-life and TV-nonlife)
+4. Conditional statements go with IF, THEN together with & and | (and/or), example: 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) & {.*As.*} > 0)' Note: AND is only used when you want the reverse of this statement, such as 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) & {.*As.*} > 0) AND IF ({.*TV-life.*} = 0) THEN ~({.*TV-nonlife.*} = 8800) & {.*As.*} > 0)'
+5. Use "@" if you do not have a specific value, example: 'IF ({.*Ty.*} = "@") THEN ({.*As.*} = "@")'
+
 To analyze data with the generated set of data-patterns use the analyze function with the dataframe with the data as input::
 
     df_results = miner.analyze(df)
