@@ -64,6 +64,7 @@ class PatternMiner:
         self.df_data = None
         self.df_patterns = None
         self.metapatterns = None
+        self.df_results = None
         self.__process_parameters(*args, **kwargs)
 
     def find(self, *args, **kwargs):
@@ -82,6 +83,61 @@ class PatternMiner:
 
         return self.df_patterns
 
+    def incorrect_columns(self, colname=None, *args, **kwargs):
+        self.__process_parameters(*args, **kwargs)
+
+        assert self.df_patterns is not None, "No patterns defined."
+        assert self.df_data is not None, "No data defined."
+
+        df_data = self.df_data.copy()
+        df_results = self.df_results.copy()
+        df_results = df_results.loc[df_results['result_type'] == False]
+        if colname:
+            df_results[colname] = ""
+        colq = self.metapatterns[0]["Q_columns"][0]
+        colp = self.metapatterns[0]["P_columns"][0]
+
+        # Change the data
+        if colname:
+            df_results.loc[df_results.index.isin(df_data.index), ['P values', 'Q values', colname]] = df_data.loc[df_data.index.isin(df_results.index), [colp, colq, colname]].values
+        else:
+            df_results.loc[df_results.index.isin(df_data.index), ['P values', 'Q values']] = df_data.loc[df_data.index.isin(df_results.index), [colp, colq]].values
+
+
+        return df_results
+
+    def correct_data(self, *args, **kwargs):
+        '''General function to change data to correct value. This only works for a very simple conditional pattern. '''
+
+        self.__process_parameters(*args, **kwargs)
+
+        assert self.df_patterns is not None, "No patterns defined."
+        assert self.df_data is not None, "No data defined."
+        assert self.df_results is not None, "No analyzing data defined."
+
+        # To get correct value
+        def get_value(pattern):
+            item = re.search(r'IF(.*)THEN(.*)', pattern)
+            item2 = re.search(r'(.*)=(.*)', item.group(2))
+            item3 = re.search(r'"(.*)"', item2.group(2))
+
+            return item3[1]
+
+
+        df_data = self.df_data.copy()
+        df_results = self.df_results.copy()
+        df_results['correct_value'] = df_results['pattern_def'].apply(get_value)
+        df_results = df_results.loc[df_results['result_type'] == False]
+
+        # Get right column
+        col = self.metapatterns[0]["Q_columns"][0]
+
+        # Change the data
+        df_data.loc[df_data.index.isin(df_results.index), col] = df_results['correct_value']
+
+        return df_data
+
+
     def analyze(self, *args, **kwargs):
         '''General function to analyze data given a list of patterns
         '''
@@ -92,9 +148,9 @@ class PatternMiner:
 
         self.df_patterns = update_statistics(dataframe = self.df_data, df_patterns = self.df_patterns)
 
-        df_results = derive_results(**kwargs, df_patterns = self.df_patterns, dataframe = self.df_data)
+        self.df_results = derive_results(**kwargs, df_patterns = self.df_patterns, dataframe = self.df_data)
 
-        return df_results
+        return self.df_results
 
     def update_statistics(self, *args, **kwargs):
         '''Function that updates the pattern statistics in df_patterns
@@ -282,43 +338,46 @@ def derive_patterns_from_expression(expression = "",
 
     amount = expression.count('.*}') #Amount of columns to be found
     amount_v = expression.count("@") #Amount of column values to be found
-    if metapattern.get('expression', None):
-        df_features = dataframe.copy()
-        # execute dynamic encoding functions
-        if encode != {}:
-            for c in df_features.columns:
-                if c in encode.keys():
-                    df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
-        dataframe2 = df_features
 
-    else:
-        dataframe2 = dataframe
+    if re.search(r'IF(.*)THEN(.*)', expression):
 
-    possible_expressions = get_possible_columns(amount, expression, dataframe2)
-    possible_expressions = add_qoutation(possible_expressions)
-    possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe2)
-    for possible_expression in possible_expressions:
-        # print(possible_expression)
-        pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
-        # print(pandas_expressions)
-        try: # Some give error so we use try
-            n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
-            n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
-            conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
-            # print(n_co,n_ex)
-            if ((conf >= confidence) and (n_co >= support)):
-                xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
-                patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
-        except TypeError as e:
-            if solvency:
-                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
-            else:
-                continue
-        except:
-            if solvency:
-                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
-            else:
-                continue
+        if metapattern.get('expression', None):
+            df_features = dataframe.copy()
+            # execute dynamic encoding functions
+            if encode != {}:
+                for c in df_features.columns:
+                    if c in encode.keys():
+                        df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
+            dataframe2 = df_features
+
+        else:
+            dataframe2 = dataframe
+
+        possible_expressions = get_possible_columns(amount, expression, dataframe2)
+        possible_expressions = add_qoutation(possible_expressions)
+        possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe2)
+        for possible_expression in possible_expressions:
+            # print(possible_expression)
+            pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
+            # print(pandas_expressions)
+            try: # Some give error so we use try
+                n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+                n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+                conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
+                # print(n_co,n_ex)
+                if ((conf >= confidence) and (n_co >= support)):
+                    xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
+                    patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
+            except TypeError as e:
+                if solvency:
+                    patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
+                else:
+                    continue
+            except:
+                if solvency:
+                    patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
+                else:
+                    continue
 
     return patterns
 
@@ -459,28 +518,23 @@ def derive_quantitative_pattern(metapattern = None,
     data_array = dataframe.values.T
     patterns = list()
     if value is not None:
-        for c in columns:
-            # confirmations and exceptions of the pattern, a list of booleans
-            try:
-                possible_expression = generate_single_expression([dataframe.columns[c]], value, pattern)
-                patterns.extend(derive_patterns_from_expression(possible_expression, metapattern, dataframe))
-            except:
-                continue
+        values = patterns_column_value(dataframe  = dataframe,
+                                value = value,
+                                pattern = pattern,
+                                 pattern_name = pattern_name,
+                                 columns = columns,
+                                 parameters = parameters)
+        for val in values:
+            patterns.extend(val)
 
     elif pattern == 'percentile':
-        percentile = parameters['percentile']
-        add_per = (100-percentile)/2
-        for c in columns:
-            # confirmations and exceptions of the pattern, a list of booleans
-            try:
-                upper = round(np.percentile(data_array[c, :], percentile + add_per),2)
-                lower = round(np.percentile(data_array[c, :], add_per),2)
-
-                # confirmations and exceptions of the pattern, a list of booleans
-                possible_expression = generate_single_expression([dataframe.columns[c]], [lower, upper], pattern)
-                patterns.extend(derive_patterns_from_expression(possible_expression, metapattern, dataframe))
-            except:
-                continue
+        values = patterns_percentile(dataframe  = dataframe,
+                                pattern = pattern,
+                                 pattern_name = pattern_name,
+                                 columns = columns,
+                                 parameters = parameters)
+        for val in values:
+            patterns.extend(val)
 
     elif pattern == 'sum':
         sums = patterns_sums_column(dataframe  = dataframe,
@@ -526,6 +580,58 @@ def derive_pattern_statistics(co):
     # oddsratio is a correlation measure
     #oddsratio = (1 + co_sum) / (1 + ex_sum)
     return co_sum, ex_sum, conf #, oddsratio
+
+def patterns_column_value(dataframe  = None,
+                            value = None,
+                           pattern    = None,
+                           pattern_name = "value",
+                           columns = None,
+                           parameters = {}):
+
+    confidence, support = get_parameters(parameters)
+    data_array = dataframe.values.T
+
+    for c in columns:
+        co = reduce(operators[pattern], [data_array[c, :], value])
+        co_sum, ex_sum, conf = derive_pattern_statistics(co)
+
+        if (conf >= confidence) and (co_sum >= support):
+            possible_expression = generate_single_expression([dataframe.columns[c]], value, pattern)
+            pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
+            xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
+            pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
+            yield pattern_data
+
+def patterns_percentile(dataframe  = None,
+                           pattern    = None,
+                           pattern_name = "percentile",
+                           columns = None,
+                           parameters = {}):
+
+    confidence, support = get_parameters(parameters)
+    data_array = dataframe.values.T
+
+    percentile = parameters['percentile']
+    add_per = (100-percentile)/2
+    for c in columns:
+        # confirmations and exceptions of the pattern, a list of booleans
+        upper = round(np.percentile(data_array[c, :], percentile + add_per),2)
+        lower = round(np.percentile(data_array[c, :], add_per),2)
+
+        co_up = reduce(operators['<='], [data_array[c, :], upper])
+        co_down = reduce(operators['>='], [data_array[c, :], lower])
+        co = np.logical_and.reduce([co_up, co_down])
+
+        co_sum, ex_sum, conf = derive_pattern_statistics(co)
+
+        if (conf >= confidence) and (co_sum >= support):
+        # confirmations and exceptions of the pattern, a list of booleans
+            possible_expression = generate_single_expression([dataframe.columns[c]], [lower, upper], pattern)
+            pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
+            xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
+            pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
+            yield pattern_data
+
 
 def patterns_column_column(dataframe  = None,
                            pattern    = None,
