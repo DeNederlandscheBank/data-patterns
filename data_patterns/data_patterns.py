@@ -106,6 +106,36 @@ class PatternMiner:
 
         return df_results
 
+    def add_columns(self, *args, **kwargs):
+        self.__process_parameters(*args, **kwargs)
+
+        assert self.df_patterns is not None, "No patterns defined."
+        assert self.df_data is not None, "No data defined."
+
+        # To get correct value
+        def get_Qvalue(pattern):
+            item = re.search(r'IF(.*)THEN(.*)', pattern)
+            item2 = re.search(r'(.*)=(.*)', item.group(2))
+            item3 = re.search(r'"(.*)"', item2.group(2))
+
+            return item3[1]
+
+        def get_Pvalue(pattern):
+            item = re.search(r'IF(.*)THEN(.*)', pattern)
+            item2 = re.search(r'(.*)=(.*)', item.group(1))
+            item3 = re.search(r'"(.*)"', item2.group(2))
+
+            return item3[1]
+
+
+        self.df_patterns['Q_val'] = self.df_patterns['pattern_def'].apply(get_Qvalue)
+        self.df_patterns['P_val'] = self.df_patterns['pattern_def'].apply(get_Pvalue)
+
+        self.df_patterns = self.df_patterns.sort_values('support', ascending=False).drop_duplicates('P_val').sort_index()
+
+        return self.df_patterns
+
+
     def correct_data(self, *args, **kwargs):
         '''General function to change data to correct value. This only works for a very simple conditional pattern. '''
 

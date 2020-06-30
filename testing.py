@@ -17,29 +17,32 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
 df.set_index('Name', inplace = True)
 df = df.reset_index()
 
-parameters = {'min_confidence': 0.5,'min_support'   : 2}
+parameters = {'min_confidence': 0,'min_support'   : 1}
 p2 ={'name'      : 'sum pattern',
                           'pattern'   : '-->',
                           'P_columns' :['Name'],
                           'Q_columns' :['Type'],
-                          'parameters': {"min_confidence": 0.5,
-                                         "min_support"   : 2 }}
+                          'parameters': {"min_confidence": 0,
+                                         "min_support"   : 1 }}
 miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find(p2)
-df_ana = miner.analyze(p2)
-
 
 print(miner.df_data)
 print(miner.df_patterns)
-print(miner.df_results)
 print(miner.metapatterns)
+
+df_d = miner.add_columns()
+print(df_d)
+
+df_ana = miner.analyze(p2)
+print(miner.df_results)
 
 df_data = miner.correct_data()
 
 print(df_data.to_string())
-df_res = miner.incorrect_columns('Name')
-
-print(df_res.to_string())
+# df_res = miner.incorrect_columns()
+#
+# print(df_res.to_string())
 
 #
 # df.set_index('Name', inplace = True)
