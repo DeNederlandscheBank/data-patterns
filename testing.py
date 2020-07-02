@@ -32,7 +32,7 @@ print(miner.df_patterns)
 print(miner.metapatterns)
 
 df_d = miner.add_columns()
-print(df_d)
+print(df_d.to_string())
 
 df_ana = miner.analyze(p2)
 print(miner.df_results)
@@ -40,9 +40,9 @@ print(miner.df_results)
 df_data = miner.correct_data()
 
 print(df_data.to_string())
-# df_res = miner.incorrect_columns()
-#
-# print(df_res.to_string())
+df_res = miner.incorrect_columns(['Assets', 'TV-life'])
+
+print(df_res.to_string())
 
 #
 # df.set_index('Name', inplace = True)

@@ -93,13 +93,16 @@ class PatternMiner:
         df_results = self.df_results.copy()
         df_results = df_results.loc[df_results['result_type'] == False]
         if colname:
-            df_results[colname] = ""
+            for i in colname:
+                df_results[i] = ""
         colq = self.metapatterns[0]["Q_columns"][0]
         colp = self.metapatterns[0]["P_columns"][0]
 
         # Change the data
         if colname:
-            df_results.loc[df_results.index.isin(df_data.index), ['P values', 'Q values', colname]] = df_data.loc[df_data.index.isin(df_results.index), [colp, colq, colname]].values
+            colx = ['P values', 'Q values']+ colname
+            coly = [colp, colq] + colname
+            df_results.loc[df_results.index.isin(df_data.index), colx] = df_data.loc[df_data.index.isin(df_results.index), coly].values
         else:
             df_results.loc[df_results.index.isin(df_data.index), ['P values', 'Q values']] = df_data.loc[df_data.index.isin(df_results.index), [colp, colq]].values
 
