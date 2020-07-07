@@ -95,8 +95,19 @@ class PatternMiner:
         if colname:
             for i in colname:
                 df_results[i] = ""
-        colq = self.metapatterns[0]["Q_columns"][0]
-        colp = self.metapatterns[0]["P_columns"][0]
+
+        # Get the column names
+        colq = get_value(df_results['pattern_def'][0], 2, 1)
+        colp = get_value(df_results['pattern_def'][0], 1, 1)
+
+        # Combine columns into one
+        if isinstance(colq, list):
+            df_data['combined']= df_data[colq].values.tolist()
+            colq = 'combined'
+
+        if isinstance(colp, list):
+            df_data['combined']= df_data[colp].values.tolist()
+            colp = 'combined'
 
         # Change the data
         if colname:
@@ -206,7 +217,7 @@ class PatternMiner:
                       return arg
         return current
 
-def get_value(pattern,num = 1):
+def get_value(pattern,num = 1, col=3):
     ''' Derive the P (num=1) or Q (num=2) value from a pattern'''
 
     values = []
@@ -220,21 +231,25 @@ def get_value(pattern,num = 1):
     # Find repeating pattern
     for match in re.finditer(r'(.*?)[&|\||\^]', item.group(num)):
         item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match[1])
-        item3 = re.search(r'"(.*)"', item2.group(3))
+        item3 = re.search(r'"(.*)"', item2.group(col))
 
         if item3 is not None: # If string
             values.append(item3[1])
         else: # If int
-            values.append(int(item2[3].replace(')', '')))
+            values.append(int(item2[col].replace(')', '')))
 
 
     item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
-    item3 = re.search(r'"(.*)"', item2.group(3))
+    if col == 1:
+        item3 = re.findall(r'{(.*?)}', item2.group(col))
+        item3 = [0,item3[-1][1:-1]]
+    else:
+        item3 = re.search(r'"(.*)"', item2.group(col))
 
     if item3 is not None: # If string
         values.append(item3[1])
     else: # If int
-        values.append(int(item2[3].replace(')', '')))
+        values.append(int(item2[col].replace(')', '')))
 
     if len(values) == 1:
         return values[0]
