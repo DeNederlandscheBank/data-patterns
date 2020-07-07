@@ -115,26 +115,14 @@ class PatternMiner:
         assert self.df_patterns is not None, "No patterns defined."
         assert self.df_data is not None, "No data defined."
 
-        # To get correct value
-        def get_Qvalue(pattern):
-            item = re.search(r'IF(.*)THEN(.*)', pattern)
-            item2 = re.search(r'(.*)=(.*)', item.group(2))
-            item3 = re.search(r'"(.*)"', item2.group(2))
+        self.df_patterns['Q_val'] = self.df_patterns['pattern_def'].apply(lambda x: get_value(x, num=2))
+        self.df_patterns['P_val'] = self.df_patterns['pattern_def'].apply(lambda x: get_value(x, num=1))
 
-            return item3[1]
+        self.df_patterns = self.df_patterns.sort_values('support', ascending=False) # Sort values
 
-        def get_Pvalue(pattern):
-            item = re.search(r'IF(.*)THEN(.*)', pattern)
-            item2 = re.search(r'(.*)=(.*)', item.group(1))
-            item3 = re.search(r'"(.*)"', item2.group(2))
+        _, idx = np.unique(self.df_patterns['P_val'].to_numpy(), return_index=True) # Drop duplicate rows
 
-            return item3[1]
-
-
-        self.df_patterns['Q_val'] = self.df_patterns['pattern_def'].apply(get_Qvalue)
-        self.df_patterns['P_val'] = self.df_patterns['pattern_def'].apply(get_Pvalue)
-
-        self.df_patterns = self.df_patterns.sort_values('support', ascending=False).drop_duplicates('P_val').sort_index()
+        self.df_patterns = self.df_patterns.iloc[idx].sort_index() # Only get dataframe rows from these indices
 
         return self.df_patterns
 
@@ -148,18 +136,10 @@ class PatternMiner:
         assert self.df_data is not None, "No data defined."
         assert self.df_results is not None, "No analyzing data defined."
 
-        # To get correct value
-        def get_value(pattern):
-            item = re.search(r'IF(.*)THEN(.*)', pattern)
-            item2 = re.search(r'(.*)=(.*)', item.group(2))
-            item3 = re.search(r'"(.*)"', item2.group(2))
-
-            return item3[1]
-
 
         df_data = self.df_data.copy()
         df_results = self.df_results.copy()
-        df_results['correct_value'] = df_results['pattern_def'].apply(get_value)
+        df_results['correct_value'] = df_results['pattern_def'].apply(lambda x: get_value(x, num=2))
         df_results = df_results.loc[df_results['result_type'] == False]
 
         # Get right column
@@ -225,6 +205,41 @@ class PatternMiner:
                 if (key_type is not None) and isinstance(arg, key_type):
                       return arg
         return current
+
+def get_value(pattern,num = 1):
+    ''' Derive the P (num=1) or Q (num=2) value from a pattern'''
+
+    values = []
+
+    item = re.search(r'IF(.*)THEN(.*)', pattern)
+
+    # If not conditional statement, return 0
+    if item == None:
+        return None
+
+    # Find repeating pattern
+    for match in re.finditer(r'(.*?)[&|\||\^]', item.group(num)):
+        item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match[1])
+        item3 = re.search(r'"(.*)"', item2.group(3))
+
+        if item3 is not None: # If string
+            values.append(item3[1])
+        else: # If int
+            values.append(int(item2[3].replace(')', '')))
+
+
+    item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
+    item3 = re.search(r'"(.*)"', item2.group(3))
+
+    if item3 is not None: # If string
+        values.append(item3[1])
+    else: # If int
+        values.append(int(item2[3].replace(')', '')))
+
+    if len(values) == 1:
+        return values[0]
+    else:
+        return values
 
 def derive_patterns(dataframe   = None,
                     metapatterns = None):

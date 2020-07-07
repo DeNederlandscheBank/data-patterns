@@ -10,18 +10,18 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                     ['Insurer  1', 'life insurer',     9000,     8800,      0,             200,         200],
                     ['Insurer  1', 'life insurer',     9000,     8800,      0,             200,         200],
                     ['Insurer  1', 'life insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  2', 'non-life insurer', 9000,     8800,      0,             200,         200],
-                    ['Insurer  2', 'non-life insurerd', 9000,     0,         8800,          200,         199.99]])
+                    ['Insurer  2', 'non-life insurerd', 9000,     8800,      0,             200,         200],
+                    ['Insurer  2', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 
 
 df.set_index('Name', inplace = True)
 df = df.reset_index()
-
+df['LA'] = 0
 parameters = {'min_confidence': 0,'min_support'   : 1}
 p2 ={'name'      : 'sum pattern',
                           'pattern'   : '-->',
                           'P_columns' :['Name'],
-                          'Q_columns' :['Type'],
+                          'Q_columns' :['Type', 'TV-life', 'LA'],
                           'parameters': {"min_confidence": 0,
                                          "min_support"   : 1 }}
 miner = data_patterns.PatternMiner(df)
@@ -34,15 +34,15 @@ print(miner.metapatterns)
 df_d = miner.add_columns()
 print(df_d.to_string())
 
-df_ana = miner.analyze(p2)
-print(miner.df_results)
-
-df_data = miner.correct_data()
-
-print(df_data.to_string())
-df_res = miner.incorrect_columns(['Assets', 'TV-life'])
-
-print(df_res.to_string())
+# df_ana = miner.analyze(p2)
+# print(miner.df_results)
+#
+# df_data = miner.correct_data()
+#
+# print(df_data.to_string())
+# df_res = miner.incorrect_columns(['Assets', 'TV-life'])
+#
+# print(df_res.to_string())
 
 #
 # df.set_index('Name', inplace = True)
