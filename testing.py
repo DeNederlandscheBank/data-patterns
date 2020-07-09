@@ -17,47 +17,39 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
 df.set_index('Name', inplace = True)
 df = df.reset_index()
 df['LA'] = 0
-parameters = {'min_confidence': 0,'min_support'   : 1}
-p2 ={'name'      : 'sum pattern',
+p1 ={'name'      : 'sum pattern',
                           'pattern'   : '-->',
                           'P_columns' :['Name'],
                           'Q_columns' :['Type'],
-                          'parameters': {"min_confidence": 0,
+                          'parameters': {"min_confidence": 'highest',
                                          "min_support"   : 1 }}
 miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(p2)
+df_patterns = miner.find(p1)
 
 print(miner.df_data)
 print(miner.df_patterns)
 print(miner.metapatterns)
 
-df_d = miner.add_columns()
-print(df_d.to_string())
-
-df_ana = miner.analyze(p2)
+df_ana = miner.analyze()
 print(miner.df_results)
 
-df_data = miner.correct_data()
+df_data, log = miner.correct_data()
 
-print(df_data.to_string())
-df_res = miner.incorrect_columns(['Assets', 'TV-life'])
+print(log.to_string())
 
-print(df_res.to_string())
 
-#
-# df.set_index('Name', inplace = True)
 # parameters = {'min_confidence': 0.5,'min_support'   : 1}
 # p2 ={'name'      : 'sum pattern',
 #                           'pattern'   : 'sum',
 #                           'parameters': {"min_confidence": 0.5,
 #                                          "min_support"   : 1,
 #                                          "nonzero" : True }}
-# miner = data_patterns.PatternMiner(df)
+# # miner = data_patterns.PatternMiner(df)
 # df_patterns = miner.find(p2 )
 # print(df_patterns.to_string())
 # print(df_patterns.loc[0,'pandas co'])
 #
-#
+# #
 #
 # parameters = {'min_confidence': 0,'min_support'   : 0}
 #

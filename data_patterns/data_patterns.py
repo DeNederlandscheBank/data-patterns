@@ -83,60 +83,6 @@ class PatternMiner:
 
         return self.df_patterns
 
-    def incorrect_columns(self, colname=None, *args, **kwargs):
-        self.__process_parameters(*args, **kwargs)
-
-        assert self.df_patterns is not None, "No patterns defined."
-        assert self.df_data is not None, "No data defined."
-
-        df_data = self.df_data.copy()
-        df_results = self.df_results.copy()
-        df_results = df_results.loc[df_results['result_type'] == False]
-        if colname:
-            for i in colname:
-                df_results[i] = ""
-
-        # Get the column names
-        colq = get_value(df_results['pattern_def'][0], 2, 1)
-        colp = get_value(df_results['pattern_def'][0], 1, 1)
-
-        # Combine columns into one
-        if isinstance(colq, list):
-            df_data['combined']= df_data[colq].values.tolist()
-            colq = 'combined'
-
-        if isinstance(colp, list):
-            df_data['combined']= df_data[colp].values.tolist()
-            colp = 'combined'
-
-        # Change the data
-        if colname:
-            colx = ['P values', 'Q values']+ colname
-            coly = [colp, colq] + colname
-            df_results.loc[df_results.index.isin(df_data.index), colx] = df_data.loc[df_data.index.isin(df_results.index), coly].values
-        else:
-            df_results.loc[df_results.index.isin(df_data.index), ['P values', 'Q values']] = df_data.loc[df_data.index.isin(df_results.index), [colp, colq]].values
-
-
-        return df_results
-
-    def add_columns(self, *args, **kwargs):
-        self.__process_parameters(*args, **kwargs)
-
-        assert self.df_patterns is not None, "No patterns defined."
-        assert self.df_data is not None, "No data defined."
-
-        self.df_patterns['Q_val'] = self.df_patterns['pattern_def'].apply(lambda x: get_value(x, num=2))
-        self.df_patterns['P_val'] = self.df_patterns['pattern_def'].apply(lambda x: get_value(x, num=1))
-
-        self.df_patterns = self.df_patterns.sort_values('support', ascending=False) # Sort values
-
-        _, idx = np.unique(self.df_patterns['P_val'].to_numpy(), return_index=True) # Drop duplicate rows
-
-        self.df_patterns = self.df_patterns.iloc[idx].sort_index() # Only get dataframe rows from these indices
-
-        return self.df_patterns
-
 
     def correct_data(self, *args, **kwargs):
         '''General function to change data to correct value. This only works for a very simple conditional pattern. '''
@@ -153,13 +99,11 @@ class PatternMiner:
         df_results['correct_value'] = df_results['pattern_def'].apply(lambda x: get_value(x, num=2))
         df_results = df_results.loc[df_results['result_type'] == False]
 
-        # Get right column
-        col = self.metapatterns[0]["Q_columns"][0]
+        # Get the column names
+        colq = get_value(df_results['pattern_def'][0], 2, 1)
 
-        # Change the data
-        df_data.loc[df_data.index.isin(df_results.index), col] = df_results['correct_value']
-
-        return df_data
+        df_data.loc[df_data.index.isin(df_results.index), colq] = df_results['correct_value']
+        return df_data, df_results # changed data and log what changed
 
 
     def analyze(self, *args, **kwargs):
@@ -264,14 +208,20 @@ def derive_patterns(dataframe   = None,
        - conditional rules ('-->'-pattern defined with their columns) and
        - single rules (defined with their colums)
     '''
+
     df_patterns = pd.DataFrame(columns = PATTERNS_COLUMNS)
     for metapattern in metapatterns:
+        parameters = metapattern.get("parameters", {})
         if "expression" in metapattern.keys():
             patterns = derive_patterns_from_template_expression(metapattern = metapattern,
                                                                 dataframe = dataframe)
         else:
             patterns = derive_patterns_from_code(metapattern = metapattern,
                                               dataframe = dataframe)
+
+        if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
+            patterns = get_highest_conf(patterns)
+
         df_patterns = df_patterns.append(patterns, ignore_index = True)
 
     df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
@@ -280,6 +230,18 @@ def derive_patterns(dataframe   = None,
     df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
     df_patterns.index.name = 'index'
     return PatternDataFrame(df_patterns)
+
+def get_highest_conf(df_patterns):
+
+    df_patterns['P_val'] = df_patterns['pattern_def'].apply(lambda x: get_value(x, num=1))
+
+    df_patterns = df_patterns.sort_values('support', ascending=False) # Sort values
+
+    _, idx = np.unique(df_patterns['P_val'].to_numpy(), return_index=True) # Drop duplicate rows
+
+    df_patterns = df_patterns.iloc[idx].sort_index() # Only get dataframe rows from these indices
+    df_patterns = df_patterns.drop(['P_val'],1)
+    return df_patterns
 
 def derive_patterns_from_template_expression(metapattern = None,
                                              dataframe = None):
@@ -396,6 +358,9 @@ def derive_patterns_from_expression(expression = "",
     encode = metapattern.get(ENCODE, {}) # TO DO
     encodings = get_encodings()
     confidence, support = get_parameters(parameters)
+    if confidence == 'highest':
+        confidence = 0
+
     solvency = parameters.get('solvency', False)
     patterns = list()
 
@@ -914,14 +879,23 @@ def derive_results(dataframe = None,
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             results_ex = eval(pandas_ex, encodings, {'df': df}).index.values.tolist()
             results_co = eval(pandas_co, encodings, {'df': df}).index.values.tolist()
+            colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
+            colp = get_value(df_patterns.loc[idx, "pattern_def"], 1, 1)
+            if isinstance(colq, list):
+                df_data['combined']= df_data[colq].values.tolist()
+                colq = 'combined'
+
+            if isinstance(colp, list):
+                df_data['combined']= df_data[colp].values.tolist()
+                colp = 'combined'
+
             for i in results_ex:
-                # values_p = df.loc[i, df_patterns.loc[idx, P_COLUMNS]].values.tolist()
-                # if type(df_patterns.loc[idx, Q_COLUMNS])==list:
-                #     values_q = df.loc[i, df_patterns.loc[idx, Q_COLUMNS]].values.tolist()
-                # else:
-                #     values_q = df_patterns.loc[idx, Q_COLUMNS]
-                values_p = ""
-                values_q = ""
+                if colq != None:
+                    values_p = dataframe.loc[i, colp]
+                    values_q = dataframe.loc[i, colq]
+                else:
+                    values_p = ""
+                    values_q = ""
                 results.append([False,
                                 df_patterns.loc[idx, "pattern_id"],
                                 df_patterns.loc[idx, "cluster"],
@@ -933,13 +907,12 @@ def derive_results(dataframe = None,
                                 values_p,
                                 values_q])
             for i in results_co:
-                # values_p = df.loc[i, df_patterns.loc[idx, P_COLUMNS]].values.tolist()
-                # if type(df_patterns.loc[idx, Q_COLUMNS])==list:
-                #     values_q = df.loc[i, df_patterns.loc[idx, Q_COLUMNS]].values.tolist()
-                # else:
-                #     values_q = df_patterns.loc[idx, Q_COLUMNS]
-                values_p = ""
-                values_q = ""
+                if colq != None:
+                    values_p = dataframe.loc[i, colp]
+                    values_q = dataframe.loc[i, colq]
+                else:
+                    values_p = ""
+                    values_q = ""
                 results.append([True,
                                 df_patterns.loc[idx, "pattern_id"],
                                 df_patterns.loc[idx, "cluster"],
@@ -957,7 +930,10 @@ def derive_results(dataframe = None,
             df_results.index = pd.MultiIndex.from_tuples(df_results.index)
         except:
             df_results.index = df_results.index
-    return ResultDataFrame(df_results)
+
+    df_results = ResultDataFrame(df_results)
+
+    return df_results
 
 
 def read_excel(filename = None,
