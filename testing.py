@@ -2,16 +2,16 @@ import data_patterns.data_patterns
 import numpy as np
 import pandas as pd
 df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-life', 'TV-nonlife' , 'Own funds', 'Excess'],
-          data   = [['Insurer  1', 'life insurer.x',     1000,     800,       0,             200,         200],
-                    ['Insurer  2', 'non-life insurer', 4000,     0,         3200,          800,         800],
-                    ['Insurer  2', 'non-life insurer', 800,      0,         700,           100,         100],
-                    ['Insurer  1', 'life insurer',     2500,     1800,      0,             700,         700],
-                    ['Insurer  2', 'non-life insurer', 2100,     0,         2200,          200,         200],
-                    ['Insurer  1', 'life insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  1', 'life insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  1', 'life insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  2', 'non-life insurerd', 9000,     8800,      0,             200,         200],
-                    ['Insurer  2', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
+          data   = [['Insurer  1', 'life & insurer.x',     1000,     800,       0,             200,         200],
+                    ['Insurer  2', 'non-life & insurer', 4000,     0,         3200,          800,         800],
+                    ['Insurer  2', 'non-life & insurer', 800,      0,         700,           100,         100],
+                    ['Insurer  1', 'life & insurer',     2500,     1800,      0,             700,         700],
+                    ['Insurer  2', 'non-life & insurer', 2100,     0,         2200,          200,         200],
+                    ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
+                    ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
+                    ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
+                    ['Insurer  2', 'non-life & insurerd', 9000,     8800,      0,             200,         200],
+                    ['Insurer  2', 'non-life & insurer', 9000,     0,         8800,          200,         199.99]])
 
 
 df.set_index('Name', inplace = True)

@@ -173,7 +173,7 @@ def get_value(pattern,num = 1, col=3):
         return None
 
     # Find repeating pattern
-    for match in re.finditer(r'(.*?)[&|\||\^]', item.group(num)):
+    for match in re.finditer(r'(.*?)[&|\||\^](\s*\({.*)', item.group(num)):
         item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match[1])
         item3 = re.search(r'"(.*)"', item2.group(col))
 
@@ -882,11 +882,11 @@ def derive_results(dataframe = None,
             colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
             colp = get_value(df_patterns.loc[idx, "pattern_def"], 1, 1)
             if isinstance(colq, list):
-                df_data['combined']= df_data[colq].values.tolist()
+                dataframe['combined']= dataframe[colq].values.tolist()
                 colq = 'combined'
 
             if isinstance(colp, list):
-                df_data['combined']= df_data[colp].values.tolist()
+                dataframe['combined']= dataframe[colp].values.tolist()
                 colp = 'combined'
 
             for i in results_ex:
