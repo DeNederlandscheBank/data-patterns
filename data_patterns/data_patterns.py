@@ -100,7 +100,7 @@ class PatternMiner:
         df_results = df_results.loc[df_results['result_type'] == False]
 
         # Get the column names
-        colq = get_value(df_results['pattern_def'][0], 2, 1)
+        colq = get_value(df_results['pattern_def'].iloc[0], 2, 1)
 
         df_data.loc[df_data.index.isin(df_results.index), colq] = df_results['correct_value']
         return df_data, df_results # changed data and log what changed

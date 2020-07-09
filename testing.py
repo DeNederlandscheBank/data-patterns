@@ -8,15 +8,15 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                     ['Insurer  1', 'life & insurer',     2500,     1800,      0,             700,         700],
                     ['Insurer  2', 'non-life & insurer', 2100,     0,         2200,          200,         200],
                     ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  2', 'non-life & insurerd', 9000,     8800,      0,             200,         200],
-                    ['Insurer  2', 'non-life & insurer', 9000,     0,         8800,          200,         199.99]])
+                    ['Insurer  1', 'life & insurer',     9010,     8800,      0,             200,         200],
+                    ['Insurer  1', 'life & insurer',     90200,     8800,      0,             200,         200],
+                    ['Insurer  2', 'non-life & insurerd', 90020,     8800,      0,             200,         200],
+                    ['Insurer  2', 'non-life & insurer', 90010,     0,         8800,          200,         199.99]])
 
-
-df.set_index('Name', inplace = True)
-df = df.reset_index()
 df['LA'] = 0
+
+df.set_index(['Assets', 'LA'], inplace = True)
+# df = df.reset_index()
 p1 ={'name'      : 'sum pattern',
                           'pattern'   : '-->',
                           'P_columns' :['Name'],
