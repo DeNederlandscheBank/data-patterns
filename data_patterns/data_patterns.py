@@ -161,43 +161,66 @@ class PatternMiner:
                       return arg
         return current
 
-def get_value(pattern,num = 1, col=3):
+def get_value(pattern, num = 1, col=3):
     ''' Derive the P (num=1) or Q (num=2) value from a pattern'''
 
     values = []
 
     item = re.search(r'IF(.*)THEN(.*)', pattern)
 
-    # If not conditional statement, return 0
+    # If not conditional statement, return None
     if item == None:
-        return None
+        if pattern.count('}') > 2: # sum
+            item2 = re.search(r'(.*)=(.*)', pattern)
+            if num == 1:
+                for match in re.finditer(r'{(.*?)}', item2[1]):
+                    item3 = re.search(r'"(.*)"', match[1])
+                    values.append(item3[1])
+            else:
+                item3 = re.search(r'"(.*)"', item2[2])
+                values.append(item3[1])
+        else:
+            item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', pattern)
+            if '{' in item2[3]:
+                if num == 1:
+                    item3 = re.search(r'"(.*)"', item2[1])
+                    values.append(item3[1])
+                else:
+                    item3 = re.search(r'"(.*)"', item2[3])
+                    values.append(item3[1])
+            else:
+                if num == 1:
+                    item3 = re.search(r'"(.*)"', item2[1])
+                    values.append(item3[1])
+                else:
+                    return None
+    else:
+        # Find repeating pattern of conditions
+        for match in re.finditer(r'(.*?)[&|\||\^](\s*\({.*)', item.group(num)):
+            item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match[1])
+            item3 = re.search(r'"(.*)"', item2.group(col))
 
-    # Find repeating pattern
-    for match in re.finditer(r'(.*?)[&|\||\^](\s*\({.*)', item.group(num)):
-        item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match[1])
-        item3 = re.search(r'"(.*)"', item2.group(col))
+            if item3 is not None: # If string
+                values.append(item3[1])
+            else: # If int
+                values.append(int(item2[col].replace(')', '')))
+
+
+        item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
+        if col == 1: # if we want the column name
+            item3 = re.findall(r'{(.*?)}', item2.group(col))
+            item3 = [0,item3[-1][1:-1]]
+        else: # if we want the column value
+            item3 = re.search(r'"(.*)"', item2.group(col))
 
         if item3 is not None: # If string
             values.append(item3[1])
         else: # If int
             values.append(int(item2[col].replace(')', '')))
 
-
-    item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
-    if col == 1:
-        item3 = re.findall(r'{(.*?)}', item2.group(col))
-        item3 = [0,item3[-1][1:-1]]
-    else:
-        item3 = re.search(r'"(.*)"', item2.group(col))
-
-    if item3 is not None: # If string
-        values.append(item3[1])
-    else: # If int
-        values.append(int(item2[col].replace(')', '')))
-
     if len(values) == 1:
         return values[0]
-    else:
+    else: # return list if multiple columns/values
         return values
 
 def derive_patterns(dataframe   = None,
@@ -218,9 +241,9 @@ def derive_patterns(dataframe   = None,
         else:
             patterns = derive_patterns_from_code(metapattern = metapattern,
                                               dataframe = dataframe)
-
-        if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
-            patterns = get_highest_conf(patterns)
+        if 'min_confidence' in parameters:
+            if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
+                patterns = get_highest_conf(patterns)
 
         df_patterns = df_patterns.append(patterns, ignore_index = True)
 
@@ -250,54 +273,117 @@ def derive_patterns_from_template_expression(metapattern = None,
     """
     expression = metapattern.get("expression", "")
     parameters = metapattern.get("parameters", {})
-
-    new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
+    if re.search(r'IF(.*)THEN(.*)', expression):
+        new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
+    else:
+        new_list = derive_quantitative_pattern_expression(expression, metapattern, dataframe)
     df_patterns = to_dataframe(patterns = new_list, parameters = parameters)
     return df_patterns
 
 
+def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
+    parameters = metapattern.get("parameters", {})
+    name = metapattern.get('name', "No name")
 
-def get_possible_columns(amount, expression, dataframe):
+    confidence, support = get_parameters(parameters)
+    numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns))
+                            if ((dataframe.dtypes[c] == 'float64') or (dataframe.dtypes[c] == 'int64'))]
+    dataframe = dataframe[numerical_columns]
+
+    patterns = list()
+
+    if '+' in expression: # Sum pattern
+        sum_elements = expression.count('+') + 1
+        parameters['sum_elements'] = sum_elements
+        P_columns = []
+        Q_columns = []
+        for match in re.finditer(r'(.*?)[+|=]', expression): # Get P_columns
+            possible_col = get_possible_columns(match[1].count('.*'), match[1],dataframe,True)
+            P_columns = P_columns + possible_col
+            P_columns = list(set(P_columns))
+        for match in re.finditer(r'=(.*)', expression): # Get Q_columns
+            possible_col = get_possible_columns(match[1].count('.*'), match[1],dataframe,True)
+            Q_columns = Q_columns + possible_col
+            Q_columns = list(set(Q_columns))
+
+        # Right format
+        Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
+        P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
+        Q_columns.sort()
+        P_columns.sort()
+
+        # Use numpy now
+        sums = patterns_sums_column(dataframe  = dataframe,
+                                 pattern_name = name,
+                                 P_columns  = P_columns,
+                                 Q_columns  = Q_columns,
+                                 parameters = parameters)
+        for pat in sums:
+            patterns.extend(pat)
+    else:
+        item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', expression)
+        if '{' in item2[3]:
+            P_columns = get_possible_columns(item2[1].count('.*'), item2[1],dataframe,True)
+            Q_columns = get_possible_columns(item2[3].count('.*'), item2[3],dataframe,True)
+            Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
+            P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
+            Q_columns.sort()
+            P_columns.sort()
+            compares = patterns_column_column(dataframe  = dataframe,
+                                    pattern = item2[2],
+                                     pattern_name = name,
+                                     P_columns  = P_columns,
+                                     Q_columns  = Q_columns,
+                                     parameters = parameters)
+            for pat in compares:
+                patterns.extend(pat)
+
+        else:
+            columns = get_possible_columns(item2[1].count('.*'), item2[1],dataframe,True)
+            value = int(item2[3])
+            columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
+            columns.sort()
+            values = patterns_column_value(dataframe  = dataframe,
+                                    value = value,
+                                    pattern = item2[2],
+                                     pattern_name = name,
+                                     columns = columns,
+                                     parameters = parameters)
+            for val in values:
+                patterns.extend(val)
+    return patterns
+
+def get_possible_columns(amount, expression, dataframe, quant=False):
     if amount == 0:
-        return [expression]
+        if quant:
+            return [expression.strip()[1:-1]]
+        else:
+            return [expression]
 
     all_columns = []
 
     for datapoint in re.findall(r'{.*?}', expression): # See which columns we are looking for per left open column
         d = datapoint[1:-1] # strip {" and "}
-        if len(d) < 5:
-            all_columns.append([re.search(d, col).group(0) for col in dataframe.columns if re.search(d, col)])
-        else: # check for multiple options
-            d = d[2:-2]
-            d = d.strip().split(',')
-            columns = []
-            for item in d:
-                item = item + '.*' # needed for regex
-                for col in dataframe.columns:
-                    if re.search(item, col):
-                        columns.append(re.search(item, col).group(0))
-            all_columns.append(columns)
+        if '*' not in datapoint:
+            continue
+        d = d.strip().split(',')
+        columns = []
+        for item in d:
+            for col in dataframe.columns:
+                if re.search(item, col):
+                    columns.append(re.search(item, col).group(0))
+        all_columns.append(columns)
         expression = expression.replace(datapoint, '{.*}', 1) # Replace it so that it goes well later
+
+    if quant: # for quantitative expressions
+        return all_columns[0]
+
     if amount > 1: # Combine the lists into combinations where we do not have duplicates
         if re.search('AND', expression):
             possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == int(len(p)/2)]
         else:
             possibilities = [p for p in itertools.product(*all_columns) if len(set(p)) == len(p)]
 
-        # We want to get rid of duplicates results when doing sum pattern or comparing columns, i.e.{x}={y} is the same as {y}={x}
-        item = re.search(r'(.*)(=)(.*)', expression)
-        if item:
-            # only do this when the righthandside is a column
-            if re.search(r'{(.*?)}',item.group(3)):
-                d = {}
-                for t in possibilities:
-                    # Flatten the tuple
-                    flat = itertools.chain.from_iterable(part if isinstance(part,list) else [part]
-                                               for part in t)
-                    maps_to = frozenset(flat) # Sets cannot be used as keys
-                    d[maps_to] = t # Add it to the dict; the most recent addition "survives"
-
-                possibilities = list(d.values())
 
     elif amount == 1: # If we have one empty spot, then just use the possible values
         possibilities = [[i] for i in all_columns[0]]
@@ -367,45 +453,44 @@ def derive_patterns_from_expression(expression = "",
     amount = expression.count('.*}') #Amount of columns to be found
     amount_v = expression.count("@") #Amount of column values to be found
 
-    if re.search(r'IF(.*)THEN(.*)', expression):
 
-        if metapattern.get('expression', None):
-            df_features = dataframe.copy()
-            # execute dynamic encoding functions
-            if encode != {}:
-                for c in df_features.columns:
-                    if c in encode.keys():
-                        df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
-            dataframe2 = df_features
+    if metapattern.get('expression', None):
+        df_features = dataframe.copy()
+        # execute dynamic encoding functions
+        if encode != {}:
+            for c in df_features.columns:
+                if c in encode.keys():
+                    df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
+        dataframe2 = df_features
 
-        else:
-            dataframe2 = dataframe
+    else:
+        dataframe2 = dataframe
 
-        possible_expressions = get_possible_columns(amount, expression, dataframe2)
-        possible_expressions = add_qoutation(possible_expressions)
-        possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe2)
-        for possible_expression in possible_expressions:
-            # print(possible_expression)
-            pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
-            # print(pandas_expressions)
-            try: # Some give error so we use try
-                n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
-                n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
-                conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
-                # print(n_co,n_ex)
-                if ((conf >= confidence) and (n_co >= support)):
-                    xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
-                    patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
-            except TypeError as e:
-                if solvency:
-                    patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
-                else:
-                    continue
-            except:
-                if solvency:
-                    patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
-                else:
-                    continue
+    possible_expressions = get_possible_columns(amount, expression, dataframe2)
+    possible_expressions = add_qoutation(possible_expressions)
+    possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe2)
+    for possible_expression in possible_expressions:
+        # print(possible_expression)
+        pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
+        # print(pandas_expressions)
+        try: # Some give error so we use try
+            n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+            n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+            conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
+            # print(n_co,n_ex)
+            if ((conf >= confidence) and (n_co >= support)):
+                xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
+                patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
+        except TypeError as e:
+            if solvency:
+                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
+            else:
+                continue
+        except:
+            if solvency:
+                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
+            else:
+                continue
 
     return patterns
 
@@ -670,10 +755,13 @@ def patterns_column_column(dataframe  = None,
     '''Generate patterns of the form [c1] operator [c2] where c1 and c2 are in columns
     '''
     confidence, support = get_parameters(parameters)
-    decimal = parameters.get("decimal", 8)
+    decimal = parameters.get("decimal", 0)
+    parameters['nonzero'] = True
     initial_data_array = dataframe.values.T
     # set up boolean masks for nonzero items per column
     nonzero = initial_data_array != 0
+
+
     preprocess_operator = preprocess[pattern]
     if pattern == "=":
         duplicates = {}
@@ -691,7 +779,10 @@ def patterns_column_column(dataframe  = None,
                                 if c1 in duplicates[c0]:
                                     continue
                                 else:
-                                    duplicates[c1].append(c0)
+                                    if c1 in duplicates:
+                                        duplicates[c1].append(c0)
+                                    else:
+                                        duplicates[c1] = [c0]
                             else:
                                 duplicates[c1] = [c0]
                         else:
@@ -715,6 +806,7 @@ def patterns_sums_column( dataframe  = None,
     sum_elements = parameters.get("sum_elements", 2)
     decimal = parameters.get("decimal", 0)
     initial_data_array = dataframe.values.T
+    parameters['nonzero'] = True
     # set up boolean masks for nonzero items per column
     nonzero = (dataframe.values != 0).T
     n = len(dataframe.columns)
@@ -725,13 +817,14 @@ def patterns_sums_column( dataframe  = None,
     #     matrix[c[0], c[1]] = v
     #     matrix[c[1], c[0]] = ~v
     # np.fill_diagonal(matrix, False)
-
+    neg_col = [1]*len(Q_columns)
     for lhs_elements in range(2, sum_elements + 1):
         for rhs_column in Q_columns:
             start_array = initial_data_array
             # minus righthandside is taken so we can use sum function for all columns
             try:
                 start_array[rhs_column, :] = -start_array[rhs_column, :]
+                neg_col[rhs_column] = -neg_col[rhs_column]
             except:
                 continue
             lhs_column_list = [col for col in P_columns if (col != rhs_column)]
@@ -744,7 +837,7 @@ def patterns_sums_column( dataframe  = None,
                     co_sum, ex_sum, conf = derive_pattern_statistics(co)
                     # we only store the patterns that satisfy criteria
                     if (conf >= confidence) and (co_sum >= support):
-                        possible_expression = generate_single_expression([dataframe.columns[c] for c in lhs_columns], [dataframe.columns[rhs_column]], 'sum')
+                        possible_expression = generate_single_expression([dataframe.columns[c] for c in lhs_columns], [dataframe.columns[rhs_column]], 'sum', [neg_col[c] for c in all_columns])
                         pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
                         xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
                         pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
@@ -890,11 +983,13 @@ def derive_results(dataframe = None,
                 colp = 'combined'
 
             for i in results_ex:
-                if colq != None:
+                if colp != None:
                     values_p = dataframe.loc[i, colp]
-                    values_q = dataframe.loc[i, colq]
                 else:
                     values_p = ""
+                if colq != None:
+                    values_q = dataframe.loc[i, colq]
+                else:
                     values_q = ""
                 results.append([False,
                                 df_patterns.loc[idx, "pattern_id"],
@@ -907,11 +1002,13 @@ def derive_results(dataframe = None,
                                 values_p,
                                 values_q])
             for i in results_co:
-                if colq != None:
+                if colp != None:
                     values_p = dataframe.loc[i, colp]
-                    values_q = dataframe.loc[i, colq]
                 else:
                     values_p = ""
+                if colq != None:
+                    values_q = dataframe.loc[i, colq]
+                else:
                     values_q = ""
                 results.append([True,
                                 df_patterns.loc[idx, "pattern_id"],

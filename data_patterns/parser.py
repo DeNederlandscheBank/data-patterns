@@ -40,14 +40,25 @@ logicals = {
         '^':operator.xor
 }
 
-def generate_single_expression(P_columns, Q_columns, pattern):
+def generate_single_expression(P_columns, Q_columns, pattern, neg = []):
     if pattern == 'percentile':
             expression = '({"' + P_columns[0] + '"} ' + '>=' + ' ' +  str(Q_columns[0])  + ') & ({"' + P_columns[0] + '"} ' + '<=' + ' ' +  str(Q_columns[1])  + ')'
     elif pattern == 'sum':
-        expression = '({"' + P_columns[0] + '"}'
+        neg[-1] = -neg[-1] # if we have addition with negative columns
+        if neg[0] == -1:
+            expression= '(-{"' + P_columns[0] + '"}'
+        else:
+            expression = '({"' + P_columns[0] + '"}'
         for idx in range(len(P_columns[1:])):
-            expression += ' + {"' + P_columns[idx+1]+ '"}'
-        expression += ' = {"' + Q_columns[0] + '"})'
+            if neg[idx + 1] == -1:
+                expression += ' - {"' + P_columns[idx+1]+ '"}'
+            else:
+                expression += ' + {"' + P_columns[idx+1]+ '"}'
+
+        if neg[-1]==-1:
+            expression += ' = -{"' + Q_columns[0] + '"})'
+        else:
+            expression += ' = {"' + Q_columns[0] + '"})'
         return expression
     elif isinstance(Q_columns, list):
         expression = '({"' + P_columns[0] + '"} ' + pattern + ' {"' + Q_columns[0] + '"})'
