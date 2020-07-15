@@ -173,50 +173,50 @@ def get_value(pattern, num = 1, col=3):
         if pattern.count('}') > 2: # sum
             item2 = re.search(r'(.*)=(.*)', pattern)
             if num == 1:
-                for match in re.finditer(r'{(.*?)}', item2[1]):
-                    item3 = re.search(r'"(.*)"', match[1])
-                    values.append(item3[1])
+                for match in re.finditer(r'{(.*?)}', item2.group(1)):
+                    item3 = re.search(r'"(.*)"', match.group(1))
+                    values.append(item3.group(1))
             else:
-                item3 = re.search(r'"(.*)"', item2[2])
-                values.append(item3[1])
+                item3 = re.search(r'"(.*)"', item2.group(2))
+                values.append(item3.group(1))
         else:
             item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', pattern)
-            if '{' in item2[3]:
+            if '{' in item2.group(3):
                 if num == 1:
-                    item3 = re.search(r'"(.*)"', item2[1])
-                    values.append(item3[1])
+                    item3 = re.search(r'"(.*)"', item2.group(1))
+                    values.append(item3.group(1))
                 else:
-                    item3 = re.search(r'"(.*)"', item2[3])
-                    values.append(item3[1])
+                    item3 = re.search(r'"(.*)"', item2.group(3))
+                    values.append(item3.group(1))
             else:
                 if num == 1:
-                    item3 = re.search(r'"(.*)"', item2[1])
-                    values.append(item3[1])
+                    item3 = re.search(r'"(.*)"', item2.group(1))
+                    values.append(item3.group(1))
                 else:
                     return None
     else:
         # Find repeating pattern of conditions
         for match in re.finditer(r'(.*?)[&|\||\^](\s*\({.*)', item.group(num)):
-            item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match[1])
+            item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match.group(1))
             item3 = re.search(r'"(.*)"', item2.group(col))
 
             if item3 is not None: # If string
-                values.append(item3[1])
+                values.append(item3.group(1))
             else: # If int
-                values.append(int(item2[col].replace(')', '')))
+                values.append(int(item2.group(col).replace(')', '')))
 
 
         item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
         if col == 1: # if we want the column name
             item3 = re.findall(r'{(.*?)}', item2.group(col))
-            item3 = [0,item3[-1][1:-1]]
+            item3 = [0, item3.group(-1)[1:-1]]
         else: # if we want the column value
             item3 = re.search(r'"(.*)"', item2.group(col))
 
         if item3 is not None: # If string
-            values.append(item3[1])
+            values.append(item3.group(1))
         else: # If int
-            values.append(int(item2[col].replace(')', '')))
+            values.append(int(item2.group(col).replace(')', '')))
 
     if len(values) == 1:
         return values[0]
@@ -248,10 +248,10 @@ def derive_patterns(dataframe   = None,
         df_patterns = df_patterns.append(patterns, ignore_index = True)
 
     df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
-
     df_patterns[SUPPORT] = df_patterns[SUPPORT].astype(np.int64)
     df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
     df_patterns.index.name = 'index'
+
     return PatternDataFrame(df_patterns)
 
 def get_highest_conf(df_patterns):
@@ -298,11 +298,11 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
         P_columns = []
         Q_columns = []
         for match in re.finditer(r'(.*?)[+|=]', expression): # Get P_columns
-            possible_col = get_possible_columns(match[1].count('.*'), match[1],dataframe,True)
+            possible_col = get_possible_columns(match.group(1).count('.*'), match.group(1),dataframe,True)
             P_columns = P_columns + possible_col
             P_columns = list(set(P_columns))
         for match in re.finditer(r'=(.*)', expression): # Get Q_columns
-            possible_col = get_possible_columns(match[1].count('.*'), match[1],dataframe,True)
+            possible_col = get_possible_columns(match.group(1).count('.*'), match.group(1),dataframe,True)
             Q_columns = Q_columns + possible_col
             Q_columns = list(set(Q_columns))
 
@@ -322,15 +322,15 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
             patterns.extend(pat)
     else:
         item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', expression)
-        if '{' in item2[3]:
-            P_columns = get_possible_columns(item2[1].count('.*'), item2[1],dataframe,True)
-            Q_columns = get_possible_columns(item2[3].count('.*'), item2[3],dataframe,True)
+        if '{' in item2.group(3):
+            P_columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
+            Q_columns = get_possible_columns(item2.group(3).count('.*'), item2.group(3),dataframe,True)
             Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
             P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
             Q_columns.sort()
             P_columns.sort()
             compares = patterns_column_column(dataframe  = dataframe,
-                                    pattern = item2[2],
+                                    pattern = item2.group(2),
                                      pattern_name = name,
                                      P_columns  = P_columns,
                                      Q_columns  = Q_columns,
@@ -339,13 +339,13 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
                 patterns.extend(pat)
 
         else:
-            columns = get_possible_columns(item2[1].count('.*'), item2[1],dataframe,True)
-            value = int(item2[3])
+            columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
+            value = item2.group(3)
             columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
             columns.sort()
             values = patterns_column_value(dataframe  = dataframe,
-                                    value = value,
-                                    pattern = item2[2],
+                                     value = value,
+                                     pattern = item2.group(2),
                                      pattern_name = name,
                                      columns = columns,
                                      parameters = parameters)
