@@ -259,7 +259,6 @@ class TestData_patterns(unittest.TestCase):
                             ['Insurer  9', 'non-life insurer', 9000,     8800,      0,             200,         200],
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
         df.set_index('Name', inplace = True)
-        parameters = {'min_confidence': 0.5,'min_support'   : 2}
         p2 = {'name'      : 'Pattern 1',
             'expression' : 'IF ({.*Ty.*} = "@") THEN ({.*.*} = "@")'}
         # Expected output

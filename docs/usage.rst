@@ -14,11 +14,11 @@ Finding simple patterns
 To introduce the features of the this package define the following Pandas DataFrame::
 
     df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-life', 'TV-nonlife' , 'Own funds', 'Excess'],
-                      data   = [['Insurer  1', 'life insurer',     1000,     800,       0,             200,         200], 
-                                ['Insurer  2', 'non-life insurer', 4000,     0,         3200,          800,         800], 
+                      data   = [['Insurer  1', 'life insurer',     1000,     800,       0,             200,         200],
+                                ['Insurer  2', 'non-life insurer', 4000,     0,         3200,          800,         800],
                                 ['Insurer  3', 'non-life insurer', 800,      0,         700,           100,         100],
-                                ['Insurer  4', 'life insurer',     2500,     1800,      0,             700,         700], 
-                                ['Insurer  5', 'non-life insurer', 2100,     0,         2200,          200,         200], 
+                                ['Insurer  4', 'life insurer',     2500,     1800,      0,             700,         700],
+                                ['Insurer  5', 'non-life insurer', 2100,     0,         2200,          200,         200],
                                 ['Insurer  6', 'life insurer',     9000,     8800,      0,             200,         200],
                                 ['Insurer  7', 'life insurer',     9000,     0,         8800,          200,         200],
                                 ['Insurer  8', 'life insurer',     9000,     8800,      0,             200,         200],
@@ -32,7 +32,7 @@ Start by defining a PatternMiner::
 
 To generate patterns use the find-function of this object::
 
-    df_patterns = miner.find({'name'      : 'equal values', 
+    df_patterns = miner.find({'name'      : 'equal values',
                               'pattern'   : '=',
                               'parameters': {"min_confidence": 0.5,
                                              "min_support"   : 2}})
@@ -46,7 +46,7 @@ The result is a DataFrame with the patterns that were found. The first part of t
 +====+==============+============+==============+============+========+===========+==========+
 |  0 |equal values  |[Own funds] |=             |[Excess]    |9       |1          |0.9       |
 +----+--------------+------------+--------------+------------+--------+-----------+----------+
-|  1 |equal values  |[Excess]    |=             |[Own funds] |9       |1          |0.9       | 
+|  1 |equal values  |[Excess]    |=             |[Own funds] |9       |1          |0.9       |
 +----+--------------+------------+--------------+------------+--------+-----------+----------+
 
 The miner finds two patterns; the first states that the 'Own funds'-column is identical to the 'Excess'-column in 9 of the 10 cases (with a confidence of 90 %, there is one case where the equal-pattern does not hold), and the second pattern is identical to the first but with the columns reversed.
@@ -70,11 +70,11 @@ Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum' (see below), an
 Setting the parameters dict
 ---------------------------
 
-Specific parameters of a pattern can be set with a parameters dict. ``min_confidence`` defines the minimum confidence of the patterns to be included in the output and ``min_support`` defines the minimum support of the patterns. 
+Specific parameters of a pattern can be set with a parameters dict. ``min_confidence`` defines the minimum confidence of the patterns to be included in the output and ``min_support`` defines the minimum support of the patterns.
 
 For the =-patterns, you can set the number of decimals for the equality between the values with ``decimal``. So::
 
-    df_patterns = miner.find({'name'      : 'equal values', 
+    df_patterns = miner.find({'name'      : 'equal values',
                               'pattern'   : '=',
                               'parameters': {"min_confidence": 0.5,
                                              "min_support"   : 2,
@@ -87,7 +87,7 @@ would output
 +====+==============+============+==============+============+========+===========+==========+
 |  0 |equal values  |[Own funds] |=             |[Excess]    |10      |0          |1.0       |
 +----+--------------+------------+--------------+------------+--------+-----------+----------+
-|  1 |equal values  |[Excess]    |=             |[Own funds] |10      |0          |1.0       | 
+|  1 |equal values  |[Excess]    |=             |[Own funds] |10      |0          |1.0       |
 +----+--------------+------------+--------------+------------+--------+-----------+----------+
 
 because 199.99 is equal to 200 with 0 decimals.
@@ -180,13 +180,11 @@ The DataFrame ``df_patterns`` contains the patterns represented by as XBRL valid
 
 This results in the following string::
 
-    IF (({Type} = "life insurer")) THEN ("Assets" = "reported") and 
-    ("Own funds" = "reported") and 
+    IF (({Type} = "life insurer")) THEN ("Assets" = "reported") and
+    ("Own funds" = "reported") and
     ("TV-life" = "reported") and ("TV-nonlife" = "not reported")
 
 This assumes that the column names of the DataFrame with which the patterns are produced are defined in the XBRL-taxonomy.
-
-TODO: test all pattern definitions, include encodings into the XBRL-code
 
 Retrieving the pattern in Pandas
 --------------------------------
@@ -197,9 +195,9 @@ The df_patterns-dataframe contains the code of the pattern in Pandas::
 
 results in the following string::
 
-    df[(df["Type"]=="life insurer") & ((reported(df["Assets"])=="reported") & 
-    (reported(df["Own funds"])=="reported") & 
-    (reported(df["TV-life"])=="reported") & 
+    df[(df["Type"]=="life insurer") & ((reported(df["Assets"])=="reported") &
+    (reported(df["Own funds"])=="reported") &
+    (reported(df["TV-life"])=="reported") &
     (reported(df["TV-nonlife"])=="not reported"))]
 
 The code creates a boolean mask based on the pattern and returns the dataframe with data for which the pattern holds.
@@ -211,4 +209,3 @@ Similarly, you can find the exceptions of a pattern with::
 
 
 We plan to provide codings of the pattern based on other relevant packages.
-

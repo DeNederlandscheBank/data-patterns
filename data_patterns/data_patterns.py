@@ -202,21 +202,23 @@ def get_value(pattern, num = 1, col=3):
 
             if item3 is not None: # If string
                 values.append(item3.group(1))
-            else: # If int
-                values.append(int(item2.group(col).replace(')', '')))
+            else: # If float
+                values.append(float(item2.group(col).replace(')', '')))
 
 
         item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
         if col == 1: # if we want the column name
             item3 = re.findall(r'{(.*?)}', item2.group(col))
-            item3 = [0, item3.group(-1)[1:-1]]
+            item3 = item3[-1][1:-1]
         else: # if we want the column value
             item3 = re.search(r'"(.*)"', item2.group(col))
+            if item3 is not None:
+                item3 = item3.group(1)
 
         if item3 is not None: # If string
-            values.append(item3.group(1))
-        else: # If int
-            values.append(int(item2.group(col).replace(')', '')))
+            values.append(item3)
+        else: # If float
+            values.append(float(item2.group(col).replace(')', '')))
 
     if len(values) == 1:
         return values[0]
@@ -321,16 +323,23 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
         for pat in sums:
             patterns.extend(pat)
     else:
-        item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', expression)
-        if '{' in item2.group(3):
+        item2 = re.search(r'(.*?)([!=|<=|>=|>|<|=])(.*)', expression)
+        pattern = item2.group(2)
+        item3 = item2.group(3)
+
+        if item3[0] == '=': # Stupid bug that does not capture >= or <=, so fixed it like this
+            pattern += '='
+            item3 = item3[1:]
+
+        if '{' in item3:
             P_columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
-            Q_columns = get_possible_columns(item2.group(3).count('.*'), item2.group(3),dataframe,True)
+            Q_columns = get_possible_columns(item3.count('.*'), item3, dataframe,True)
             Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
             P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
             Q_columns.sort()
             P_columns.sort()
             compares = patterns_column_column(dataframe  = dataframe,
-                                    pattern = item2.group(2),
+                                    pattern = pattern,
                                      pattern_name = name,
                                      P_columns  = P_columns,
                                      Q_columns  = Q_columns,
@@ -340,12 +349,12 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
 
         else:
             columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
-            value = item2.group(3)
+            value = float(item3)
             columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
             columns.sort()
             values = patterns_column_value(dataframe  = dataframe,
                                      value = value,
-                                     pattern = item2.group(2),
+                                     pattern = pattern,
                                      pattern_name = name,
                                      columns = columns,
                                      parameters = parameters)
