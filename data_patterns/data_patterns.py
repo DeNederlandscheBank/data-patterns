@@ -195,30 +195,29 @@ def get_value(pattern, num = 1, col=3):
                 else:
                     return None
     else:
+        if col == 1:
+            for match in re.finditer(r'{(.*?)}', item.group(num)):
+                item3 = match[1][1:-1]
+                values.append(item3)
+        else:
         # Find repeating pattern of conditions
-        for match in re.finditer(r'(.*?)[&|\||\^](\s*\({.*)', item.group(num)):
-            item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match.group(1))
+            for match in re.finditer(r'(.*?)[&|\||\^](\s*\({.*)', item.group(num)):
+                item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', match.group(1))
+                item3 = re.search(r'"(.*)"', item2.group(col))
+
+                if item3 is not None: # If string
+                    values.append(item3.group(1))
+                else: # If float
+                    values.append(float(item2.group(col).replace(')', '')))
+
+
+            item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
             item3 = re.search(r'"(.*)"', item2.group(col))
 
             if item3 is not None: # If string
                 values.append(item3.group(1))
             else: # If float
                 values.append(float(item2.group(col).replace(')', '')))
-
-
-        item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
-        if col == 1: # if we want the column name
-            item3 = re.findall(r'{(.*?)}', item2.group(col))
-            item3 = item3[-1][1:-1]
-        else: # if we want the column value
-            item3 = re.search(r'"(.*)"', item2.group(col))
-            if item3 is not None:
-                item3 = item3.group(1)
-
-        if item3 is not None: # If string
-            values.append(item3)
-        else: # If float
-            values.append(float(item2.group(col).replace(')', '')))
 
     if len(values) == 1:
         return values[0]
@@ -933,16 +932,28 @@ def update_statistics(dataframe = None,
             # Calculate pattern statistics (from evaluating pandas expressions)
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
-            n_co = len(eval(pandas_co, encodings,{'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
-            n_ex = len(eval(pandas_ex, encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
-            total = n_co + n_ex
-            if total > 0:
-                conf = np.round(n_co / total, 4)
-            else:
-                conf = 0
-            df_patterns.loc[idx, SUPPORT] = n_co
-            df_patterns.loc[idx, EXCEPTIONS] = n_ex
-            df_patterns.loc[idx, CONFIDENCE] = conf
+            try:
+                n_co = len(eval(pandas_co, encodings,{'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+                n_ex = len(eval(pandas_ex, encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+                total = n_co + n_ex
+                if total > 0:
+                    conf = np.round(n_co / total, 4)
+                else:
+                    conf = 0
+                df_patterns.loc[idx, SUPPORT] = n_co
+                df_patterns.loc[idx, EXCEPTIONS] = n_ex
+                df_patterns.loc[idx, CONFIDENCE] = conf
+            except TypeError as e:
+                df_patterns.loc[idx, SUPPORT] = None
+                df_patterns.loc[idx, EXCEPTIONS] = None
+                df_patterns.loc[idx, CONFIDENCE] = None
+                df_patterns.loc[idx, ERROR] = e
+            except:
+                df_patterns.loc[idx, SUPPORT] = None
+                df_patterns.loc[idx, EXCEPTIONS] = None
+                df_patterns.loc[idx, CONFIDENCE] = None
+                df_patterns.loc[idx, ERROR] = 'ERROR unknown'
+
             df_new_patterns = df_patterns
         # deleting the levels of the index to the columns
         for level in range(len(dataframe.index.names)):
@@ -979,56 +990,68 @@ def derive_results(dataframe = None,
         for idx in df_patterns.index:
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
-            results_ex = eval(pandas_ex, encodings, {'df': df}).index.values.tolist()
-            results_co = eval(pandas_co, encodings, {'df': df}).index.values.tolist()
-            colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
-            colp = get_value(df_patterns.loc[idx, "pattern_def"], 1, 1)
-            if isinstance(colq, list):
-                dataframe['combined']= dataframe[colq].values.tolist()
-                colq = 'combined'
+            try:
+                results_ex = eval(pandas_ex, encodings, {'df': df}).index.values.tolist()
+                results_co = eval(pandas_co, encodings, {'df': df}).index.values.tolist()
+                colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
+                colp = get_value(df_patterns.loc[idx, "pattern_def"], 1, 1)
+                if isinstance(colq, list):
+                    dataframe['combined']= dataframe[colq].values.tolist()
+                    colq = 'combined'
 
-            if isinstance(colp, list):
-                dataframe['combined']= dataframe[colp].values.tolist()
-                colp = 'combined'
+                if isinstance(colp, list):
+                    dataframe['combined']= dataframe[colp].values.tolist()
+                    colp = 'combined'
 
-            for i in results_ex:
-                if colp != None:
-                    values_p = dataframe.loc[i, colp]
-                else:
-                    values_p = ""
-                if colq != None:
-                    values_q = dataframe.loc[i, colq]
-                else:
-                    values_q = ""
-                results.append([False,
-                                df_patterns.loc[idx, "pattern_id"],
-                                df_patterns.loc[idx, "cluster"],
-                                i,
-                                df_patterns.loc[idx, "support"],
-                                df_patterns.loc[idx, "exceptions"],
-                                df_patterns.loc[idx, "confidence"],
-                                df_patterns.loc[idx, "pattern_def"],
-                                values_p,
-                                values_q])
-            for i in results_co:
-                if colp != None:
-                    values_p = dataframe.loc[i, colp]
-                else:
-                    values_p = ""
-                if colq != None:
-                    values_q = dataframe.loc[i, colq]
-                else:
-                    values_q = ""
+                for i in results_ex:
+                    if colp != None:
+                        values_p = dataframe.loc[i, colp]
+                    else:
+                        values_p = ""
+                    if colq != None:
+                        values_q = dataframe.loc[i, colq]
+                    else:
+                        values_q = ""
+                    results.append([False,
+                                    df_patterns.loc[idx, "pattern_id"],
+                                    df_patterns.loc[idx, "cluster"],
+                                    i,
+                                    df_patterns.loc[idx, "support"],
+                                    df_patterns.loc[idx, "exceptions"],
+                                    df_patterns.loc[idx, "confidence"],
+                                    df_patterns.loc[idx, "pattern_def"],
+                                    values_p,
+                                    values_q])
+                for i in results_co:
+                    if colp != None:
+                        values_p = dataframe.loc[i, colp]
+                    else:
+                        values_p = ""
+                    if colq != None:
+                        values_q = dataframe.loc[i, colq]
+                    else:
+                        values_q = ""
+                    results.append([True,
+                                    df_patterns.loc[idx, "pattern_id"],
+                                    df_patterns.loc[idx, "cluster"],
+                                    i,
+                                    df_patterns.loc[idx, "support"],
+                                    df_patterns.loc[idx, "exceptions"],
+                                    df_patterns.loc[idx, "confidence"],
+                                    df_patterns.loc[idx, "pattern_def"],
+                                    values_p,
+                                    values_q])
+            except:
                 results.append([True,
                                 df_patterns.loc[idx, "pattern_id"],
                                 df_patterns.loc[idx, "cluster"],
-                                i,
+                                0,
                                 df_patterns.loc[idx, "support"],
                                 df_patterns.loc[idx, "exceptions"],
                                 df_patterns.loc[idx, "confidence"],
                                 df_patterns.loc[idx, "pattern_def"],
-                                values_p,
-                                values_q])
+                                df_patterns.loc[idx, ERROR],
+                                ''])
         df_results = pd.DataFrame(data = results, columns = RESULTS_COLUMNS)
         df_results.sort_values(by = ["index", "confidence", "support"], ascending = [True, False, False], inplace = True)
         df_results.set_index(["index"], inplace = True)
