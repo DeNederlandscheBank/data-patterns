@@ -70,7 +70,6 @@ class PatternMiner:
     def find(self, *args, **kwargs):
         '''General function to find patterns
         '''
-
         self.__process_parameters(*args, **kwargs)
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
@@ -183,21 +182,21 @@ def get_value(pattern, num = 1, col=3):
             item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', pattern)
             if '{' in item2.group(3):
                 if num == 1:
-                    item3 = re.search(r'"(.*)"', item2.group(1))
-                    values.append(item3.group(1))
+                    item3 = re.search(r'{(.*?)}', item2.group(1))
+                    values.append(item3.group(1)[1:-1])
                 else:
-                    item3 = re.search(r'"(.*)"', item2.group(3))
-                    values.append(item3.group(1))
+                    item3 = re.search(r'{(.*?)}', item2.group(3))
+                    values.append(item3.group(1)[1:-1])
             else:
                 if num == 1:
-                    item3 = re.search(r'"(.*)"', item2.group(1))
-                    values.append(item3.group(1))
+                    item3 = re.search(r'{(.*?)}', item2.group(1))
+                    values.append(item3.group(1)[1:-1])
                 else:
                     return None
     else:
         if col == 1:
             for match in re.finditer(r'{(.*?)}', item.group(num)):
-                item3 = match[1][1:-1]
+                item3 = match.group(1)[1:-1]
                 values.append(item3)
         else:
         # Find repeating pattern of conditions
@@ -274,6 +273,7 @@ def derive_patterns_from_template_expression(metapattern = None,
     """
     expression = metapattern.get("expression", "")
     parameters = metapattern.get("parameters", {})
+    solvency = parameters.get('solvency', False)
     if re.search(r'IF(.*)THEN(.*)', expression):
         new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
     else:
@@ -990,6 +990,7 @@ def derive_results(dataframe = None,
         for idx in df_patterns.index:
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
+            # print(idx)
             try:
                 results_ex = eval(pandas_ex, encodings, {'df': df}).index.values.tolist()
                 results_co = eval(pandas_co, encodings, {'df': df}).index.values.tolist()
@@ -1020,8 +1021,8 @@ def derive_results(dataframe = None,
                                     df_patterns.loc[idx, "exceptions"],
                                     df_patterns.loc[idx, "confidence"],
                                     df_patterns.loc[idx, "pattern_def"],
-                                    values_p,
-                                    values_q])
+                                    colp,
+                                    colq])
                 for i in results_co:
                     if colp != None:
                         values_p = dataframe.loc[i, colp]
@@ -1051,7 +1052,7 @@ def derive_results(dataframe = None,
                                 df_patterns.loc[idx, "confidence"],
                                 df_patterns.loc[idx, "pattern_def"],
                                 df_patterns.loc[idx, ERROR],
-                                ''])
+                                'BUG'])
         df_results = pd.DataFrame(data = results, columns = RESULTS_COLUMNS)
         df_results.sort_values(by = ["index", "confidence", "support"], ascending = [True, False, False], inplace = True)
         df_results.set_index(["index"], inplace = True)
