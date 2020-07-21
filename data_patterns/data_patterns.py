@@ -169,21 +169,18 @@ def get_value(pattern, num = 1, col=3):
 
     # If not conditional statement, return None
     if item == None:
+        item2 = re.search(r'(.*)[><=](.*)', pattern)
+
         if pattern.count('}') > 2: # sum
-            item2 = re.search(r'(.*)[>|<|=](.*)', pattern)
             for match in re.finditer(r'{(.*?)}', item2.group(num)):
                 item3 = re.search(r'"(.*)"', match.group(1))
                 values.append(item3.group(1))
 
         else:
-            item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', pattern)
-            if '{' in item2.group(3):
-                if num == 1:
-                    item3 = re.search(r'{(.*?)}', item2.group(1))
-                    values.append(item3.group(1)[1:-1])
-                else:
-                    item3 = re.search(r'{(.*?)}', item2.group(3))
-                    values.append(item3.group(1)[1:-1])
+            if '{' in item2.group(2):
+                item3 = re.search(r'{(.*?)}', item2.group(num))
+                values.append(item3.group(1)[1:-1])
+
             else:
                 if num == 1:
                     item3 = re.search(r'{(.*?)}', item2.group(1))
@@ -256,7 +253,7 @@ def get_highest_conf(df_patterns):
 
     df_patterns = df_patterns.sort_values('support', ascending=False) # Sort values
 
-    _, idx = np.unique(df_patterns['P_val'].to_numpy(), return_index=True) # Drop duplicate rows
+    _, idx = np.unique(df_patterns['P_val'].astype(str).to_numpy(), return_index=True) # Drop duplicate rows
 
     df_patterns = df_patterns.iloc[idx].sort_index() # Only get dataframe rows from these indices
     df_patterns = df_patterns.drop(['P_val'],1)
