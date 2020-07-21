@@ -27,7 +27,10 @@ encodings_definitions = {
 
 'reported': 'def reported(c):\n\
     if not isinstance(c, pd.Series):\n\
-        return ["not reported" if np.isnan(i) else "not reported" if i == 0 else "reported" for i in c]\n\
+        if isinstance(c, list):\n\
+            return ["not reported" if np.isnan(i) else "not reported" if i == 0 else "reported" for i in c]\n\
+        else:\n\
+            return "not reported" if np.isnan(c) else "not reported" if c == 0 else "reported"\n\
     else:\n\
         return pd.Series(index = c.index, data = ["not reported" if np.isnan(i) else "not reported" if i == 0 else "reported" for i in c])',
 

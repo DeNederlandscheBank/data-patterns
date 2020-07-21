@@ -241,7 +241,6 @@ def derive_patterns(dataframe   = None,
         if 'min_confidence' in parameters:
             if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
                 patterns = get_highest_conf(patterns)
-
         df_patterns = df_patterns.append(patterns, ignore_index = True)
 
     df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
@@ -270,12 +269,13 @@ def derive_patterns_from_template_expression(metapattern = None,
     """
     expression = metapattern.get("expression", "")
     parameters = metapattern.get("parameters", {})
+    encodings = metapattern.get("encode", {})
     solvency = parameters.get('solvency', False)
     if re.search(r'IF(.*)THEN(.*)', expression):
         new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
     else:
         new_list = derive_quantitative_pattern_expression(expression, metapattern, dataframe)
-    df_patterns = to_dataframe(patterns = new_list, parameters = parameters)
+    df_patterns = to_dataframe(patterns = new_list, parameters = parameters, encodings=encodings)
     return df_patterns
 
 
@@ -446,7 +446,7 @@ def derive_patterns_from_expression(expression = "",
     """
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
-    encode = metapattern.get(ENCODE, {}) # TO DO
+    encode = metapattern.get(ENCODE, {})
     encodings = get_encodings()
     confidence, support = get_parameters(parameters)
     if confidence == 'highest':
@@ -516,6 +516,7 @@ def derive_patterns_from_code(metapattern = None,
     Q_columns = metapattern.get("Q_columns", None)
     value = metapattern.get("value", None)
     values = metapattern.get("values", None)
+    encodings = metapattern.get("encode", {})
     parameters = metapattern.get("parameters", {})
 
 
@@ -538,7 +539,7 @@ def derive_patterns_from_code(metapattern = None,
 
 
         patterns = possible_expressions
-    df_patterns = to_dataframe(patterns = patterns, parameters = parameters)
+    df_patterns = to_dataframe(patterns = patterns, parameters = parameters, encodings= encodings)
     return df_patterns
 
 
@@ -900,13 +901,13 @@ def to_pandas_expressions(pattern, encode, parameters, dataframe):
 
     return [co_str, ex_str]
 
-def to_dataframe(patterns = None, parameters = {}):
+def to_dataframe(patterns = None, parameters = {}, encodings={}):
     '''Convert list of patterns to dataframe with patterns
     '''
     # unpack pattern_id and pattern and patterns_stats and exclude co and ex and set pattern status to unknown
     patterns = list(patterns)
     if len(patterns) > 0:
-        data = [pattern_id + [pattern] + pattern_stats + [INITIAL_PATTERN_STATUS] + [{}] +
+        data = [pattern_id + [pattern] + pattern_stats + [INITIAL_PATTERN_STATUS] + [encodings] +
                [pandas_co, pandas_ex, xbrl_co, xbrl_ex, error] for [pattern_id, pattern, pattern_stats, pandas_co, pandas_ex, xbrl_co, xbrl_ex, error] in patterns]
         df = pd.DataFrame(data = data, columns = PATTERNS_COLUMNS)
         df.index.name = 'index'
@@ -978,7 +979,6 @@ def derive_results(dataframe = None,
         except:
             print("Join of P_dataframe and Q_dataframe failed, overlapping columns?")
             return []
-
     encodings = get_encodings()
 
     if (dataframe is not None) and (df_patterns is not None):
@@ -988,18 +988,21 @@ def derive_results(dataframe = None,
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             # print(idx)
+            encode = df_patterns.loc[idx, ENCODINGS]
+
             try:
                 results_ex = eval(pandas_ex, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index.values.tolist()
                 results_co = eval(pandas_co, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index.values.tolist()
                 colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
                 colp = get_value(df_patterns.loc[idx, "pattern_def"], 1, 1)
                 if isinstance(colq, list):
-                    dataframe['combined']= dataframe[colq].values.tolist()
-                    colq = 'combined'
+                    dataframe['combined_q']= dataframe[colq].values.tolist()
+                    colq_old = colq
+                    colq = 'combined_q'
 
                 if isinstance(colp, list):
-                    dataframe['combined']= dataframe[colp].values.tolist()
-                    colp = 'combined'
+                    dataframe['combined_p']= dataframe[colp].values.tolist()
+                    colp = 'combined_p'
 
                 for i in results_ex:
                     if colp != None:
@@ -1010,6 +1013,20 @@ def derive_results(dataframe = None,
                         values_q = dataframe.loc[i, colq]
                     else:
                         values_q = ""
+
+                    # Encode if necessary
+                    # if encode != {}:
+                    #     if not isinstance(values_p, list):
+                    #         values_p = [values_p]
+                    #     if not isinstance(values_q, list):
+                    #         values_q = [values_q]
+                    #     for c in range(len(colq_old)):
+                    #         if colq_old[c] in encode.keys():
+                    #             values_q[c] = eval(str(encode[colq_old[c]])+ "(s)", encodings, {'s': values_q[c]})
+                    #     for c in range(len(colq_old)):
+                    #         if colq_old[c] in encode.keys():
+                    #             values_q[c] = eval(str(encode[colq_old[c]])+ "(s)", encodings, {'s': values_q[c]})
+
                     results.append([False,
                                     df_patterns.loc[idx, "pattern_id"],
                                     df_patterns.loc[idx, "cluster"],
@@ -1018,8 +1035,8 @@ def derive_results(dataframe = None,
                                     df_patterns.loc[idx, "exceptions"],
                                     df_patterns.loc[idx, "confidence"],
                                     df_patterns.loc[idx, "pattern_def"],
-                                    colp,
-                                    colq])
+                                    values_p,
+                                    values_q])
                 for i in results_co:
                     if colp != None:
                         values_p = dataframe.loc[i, colp]
