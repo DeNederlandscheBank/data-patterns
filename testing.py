@@ -40,24 +40,23 @@ print(df)
 # df_cor = miner.correct_data()
 # print(df_cor)
 #
+
+
+
+
+
+
 #
-#
-#
-#
-#
-#
-# #
-# pattern ={'name'      : 'sum pattern',
-#                           'expression'   : 'IF {"Assets"} <> 0|{"TV-life"}<>0 THEN {"Excess"}<>0',
-#                           'parameters': {"min_confidence": 0.2,
-#                                          "min_support"   : 1}}
-# miner = data_patterns.PatternMiner(df)
-# df_patterns = miner.find(pattern)
-# print(df_patterns.to_string())
-# print(df_patterns.loc[0,'pandas co'])
-# df_ana = miner.analyze()
-# print(miner.df_results)
-# print(data_patterns.get_value("IF {'S.01.03.01.01,C0040'}!=' ' THEN {'S.01.03.01.01,C0060'}!=' '", 1,1))
+pattern ={'name'      : 'sum pattern',
+                          'expression'   : 'IF {"Assets"} <> 0|{"TV-life"}<>0 THEN {"Excess"}<>0',
+                          'parameters': {"min_confidence": 0.2,
+                                         "min_support"   : 1}}
+miner = data_patterns.PatternMiner(df)
+df_patterns = miner.find(pattern)
+print(df_patterns.to_string())
+print(df_patterns.loc[0,'pandas co'])
+df_ana = miner.analyze()
+print(miner.df_results)
 pattern ={'name'      : 'sum pattern',
                           'expression'   : '{.*} = {.*}',
                           'parameters': {"min_confidence": 0.5,
@@ -78,3 +77,5 @@ print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
 df_ana = miner.analyze()
 print(miner.df_results)
+print(data_patterns.get_value('IF {"S.26.04.01.05,R1200,C0230"} !=0 THEN {"S.26.04.01.05,R1200,C0230"} = MAX({"S.26.04.01.05,R1200,C0190"} - {"S.26.04.01.05,R1200,C0200"} - {"S.26.04.01.05,R1200,C0210"} + {"S.26.04.01.05,R1200,C0220"},0)', 2,1))
+print(data_patterns.get_value('{"S.26.05.01.02,R0300,C0100"}>({"S.26.05.01.01,R0230,C0020"}*3*{"S.26.05.01.01,R0220,C0090"})', 1,1))

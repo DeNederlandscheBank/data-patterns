@@ -170,14 +170,11 @@ def get_value(pattern, num = 1, col=3):
     # If not conditional statement, return None
     if item == None:
         if pattern.count('}') > 2: # sum
-            item2 = re.search(r'(.*)=(.*)', pattern)
-            if num == 1:
-                for match in re.finditer(r'{(.*?)}', item2.group(1)):
-                    item3 = re.search(r'"(.*)"', match.group(1))
-                    values.append(item3.group(1))
-            else:
-                item3 = re.search(r'"(.*)"', item2.group(2))
+            item2 = re.search(r'(.*)[>|<|=](.*)', pattern)
+            for match in re.finditer(r'{(.*?)}', item2.group(num)):
+                item3 = re.search(r'"(.*)"', match.group(1))
                 values.append(item3.group(1))
+
         else:
             item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', pattern)
             if '{' in item2.group(3):
@@ -992,8 +989,8 @@ def derive_results(dataframe = None,
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             # print(idx)
             try:
-                results_ex = eval(pandas_ex, encodings, {'df': df}).index.values.tolist()
-                results_co = eval(pandas_co, encodings, {'df': df}).index.values.tolist()
+                results_ex = eval(pandas_ex, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index.values.tolist()
+                results_co = eval(pandas_co, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index.values.tolist()
                 colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
                 colp = get_value(df_patterns.loc[idx, "pattern_def"], 1, 1)
                 if isinstance(colq, list):
