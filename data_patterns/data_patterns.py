@@ -15,7 +15,8 @@ from .constants import *
 from .transform import *
 from .encodings import *
 from .parser import *
-
+import logging
+logging.basicConfig(filename='logger.log',format='%(levelname)s:%(message)s',level=logging.DEBUG)
 #import optimized
 
 __author__ = """De Nederlandsche Bank"""
@@ -73,7 +74,10 @@ class PatternMiner:
         self.__process_parameters(*args, **kwargs)
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
+        logging.info(' Rows in data: ' + str(self.df_data.shape[0]))
+
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
+
         if (not kwargs.get('append', False)) or (self.df_patterns is None):
             self.df_patterns = new_df_patterns
         else:
@@ -235,9 +239,12 @@ def derive_patterns(dataframe   = None,
         else:
             patterns = derive_patterns_from_code(metapattern = metapattern,
                                               dataframe = dataframe)
+        logging.info(' Total rows in patterns: ' + str(patterns.shape[0]))
         if 'min_confidence' in parameters:
             if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
                 patterns = get_highest_conf(patterns)
+                logging.info(' Reduction of rows in patterns to: ' + str(patterns.shape[0]))
+
         df_patterns = df_patterns.append(patterns, ignore_index = True)
 
     df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
@@ -253,7 +260,7 @@ def get_highest_conf(df_patterns):
 
     df_patterns = df_patterns.sort_values('support', ascending=False) # Sort values
 
-    _, idx = np.unique(df_patterns['P_val'].astype(str).to_numpy(), return_index=True) # Drop duplicate rows
+    _, idx = np.unique(df_patterns['P_val'].astype(str).values, return_index=True) # Drop duplicate rows
 
     df_patterns = df_patterns.iloc[idx].sort_index() # Only get dataframe rows from these indices
     df_patterns = df_patterns.drop(['P_val'],1)
@@ -277,6 +284,8 @@ def derive_patterns_from_template_expression(metapattern = None,
 
 
 def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
+    logging.info(' Calling function derive_quantitative_pattern_expression')
+
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
 
@@ -411,7 +420,7 @@ def get_possible_values(amount, possible_expressions, dataframe):
                 all_columns.append(value_col)
 
             # print(all_columns)
-            all_columns_v = dataframe[all_columns].drop_duplicates().to_numpy()
+            all_columns_v = dataframe[all_columns].drop_duplicates().values
             # print(all_columns_v)
             for columns_v in all_columns_v: # Make all combinations without duplicates  of values
                 possible_expression_v = possible_expression
@@ -441,6 +450,8 @@ def derive_patterns_from_expression(expression = "",
                                     dataframe = None):
     """
     """
+    logging.info(' Calling function derive_patterns_from_expression')
+
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
     encode = metapattern.get(ENCODE, {})
@@ -471,6 +482,11 @@ def derive_patterns_from_expression(expression = "",
     possible_expressions = get_possible_columns(amount, expression, dataframe2)
     possible_expressions = add_qoutation(possible_expressions)
     possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe2)
+    if len(possible_expressions) > 40:
+        logging.warning(' Amount of possibilities is high! Namely, ' + str(len(possible_expressions)))
+    else:
+        logging.info(' Amount of possibilities: ' + str(len(possible_expressions)))
+
     for possible_expression in possible_expressions:
         # print(possible_expression)
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
@@ -484,11 +500,13 @@ def derive_patterns_from_expression(expression = "",
                 xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
                 patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
         except TypeError as e:
+            logging.Error('Error in trying to process pandas expression: ' +  str(e))
             if solvency:
                 patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
             else:
                 continue
         except:
+            logging.Error('Error in trying to process pandas expression: UNKNOWN ERROR')
             if solvency:
                 patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
             else:
@@ -545,6 +563,8 @@ def derive_conditional_pattern(dataframe = None,
     '''Here we derive the patterns from the metapattern definitions
        by evaluating the pandas expressions of all potential patterns
     '''
+    logging.info(' Calling function derive_conditional_pattern')
+
     # get items from metapattern definition
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
@@ -565,7 +585,7 @@ def derive_conditional_pattern(dataframe = None,
         for c in df_features.columns:
             if c in encode.keys():
                 df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
-    if encode != {}:
+
         expressions = []
         df_features = df_features.drop_duplicates(P_columns + Q_columns)
         for idx in range(len(df_features.index)):
@@ -595,6 +615,7 @@ def derive_quantitative_pattern(metapattern = None,
                                 columns = None,
                                 value = None,
                                 parameters = {}):
+    logging.info(' Calling function derive_quantitative_pattern')
 
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 8)
@@ -763,13 +784,16 @@ def patterns_column_column(dataframe  = None,
     initial_data_array = dataframe.values.T
     # set up boolean masks for nonzero items per column
     nonzero = initial_data_array != 0
-
+    count = 0
 
     preprocess_operator = preprocess[pattern]
     if pattern == "=":
         duplicates = {}
     for c0 in P_columns:
         for c1 in Q_columns:
+            count += 1
+            if count == 40:
+                logging.warning(' More than 40 possibilities!')
             if c0 != c1:
                 # applying the filter
                 data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
@@ -820,6 +844,8 @@ def patterns_sums_column( dataframe  = None,
     #     matrix[c[0], c[1]] = v
     #     matrix[c[1], c[0]] = ~v
     # np.fill_diagonal(matrix, False)
+
+    count = 0
     neg_col = [1]*len(Q_columns)
     for lhs_elements in range(2, sum_elements + 1):
         for rhs_column in Q_columns:
@@ -832,6 +858,9 @@ def patterns_sums_column( dataframe  = None,
                 continue
             lhs_column_list = [col for col in P_columns if (col != rhs_column)]
             for lhs_columns in itertools.combinations(lhs_column_list, lhs_elements):
+                count += 1
+                if count == 50:
+                    logging.warning(' More than 50 possibilities!')
                 all_columns = lhs_columns + (rhs_column,)
                 data_filter = np.logical_and.reduce(nonzero[all_columns, :])
                 if data_filter.any():
@@ -888,13 +917,14 @@ def derive_ratio_pattern(dataframe  = None,
 
 def to_pandas_expressions(pattern, encode, parameters, dataframe):
     """Derive pandas code from the pattern definition string both confirmation and exceptions"""
-
+    logging.debug(' Pattern in: ' + pattern)
     # preprocessing step
     res = preprocess_pattern(pattern, parameters)
     # datapoints to pandas, i.e. {column} -> df[column]
     res, nonzero_col = datapoints2pandas(res, encode)
     # expression to pandas, i.e. IF X=x THEN Y=y -> df[df[X]=x & df[Y]=y] for confirmations
     co_str, ex_str = expression2pandas(res, nonzero_col, parameters)
+    logging.debug(' Pandas out: ' + co_str)
 
     return [co_str, ex_str]
 
@@ -970,6 +1000,8 @@ def derive_results(dataframe = None,
     '''Results (patterns applied to data) are derived
        All info of the patterns is included in the results
     '''
+    logging.info(' Calling function derive_results')
+
     if (P_dataframe is not None) and (Q_dataframe is not None):
         try:
             dataframe = P_dataframe.join(Q_dataframe)
@@ -1053,6 +1085,18 @@ def derive_results(dataframe = None,
                                     df_patterns.loc[idx, "pattern_def"],
                                     values_p,
                                     values_q])
+            except TypeError as e:
+                results.append([True,
+                                df_patterns.loc[idx, "pattern_id"],
+                                df_patterns.loc[idx, "cluster"],
+                                0,
+                                df_patterns.loc[idx, "support"],
+                                df_patterns.loc[idx, "exceptions"],
+                                df_patterns.loc[idx, "confidence"],
+                                df_patterns.loc[idx, "pattern_def"],
+                                df_patterns.loc[idx, ERROR],
+                                'BUG'])
+                logging.error(' Error in analyze: ' + str(e))
             except:
                 results.append([True,
                                 df_patterns.loc[idx, "pattern_id"],
@@ -1064,6 +1108,8 @@ def derive_results(dataframe = None,
                                 df_patterns.loc[idx, "pattern_def"],
                                 df_patterns.loc[idx, ERROR],
                                 'BUG'])
+                logging.error(' Error in analyze: UNKOWN')
+
         df_results = pd.DataFrame(data = results, columns = RESULTS_COLUMNS)
         df_results.sort_values(by = ["index", "confidence", "support"], ascending = [True, False, False], inplace = True)
         df_results.set_index(["index"], inplace = True)
@@ -1073,6 +1119,7 @@ def derive_results(dataframe = None,
             df_results.index = df_results.index
 
     df_results = ResultDataFrame(df_results)
+    logging.info(' Rows in analyze: ' + str(df_results.shape[0]))
 
     return df_results
 

@@ -1,6 +1,12 @@
-import data_patterns.data_patterns
+import data_patterns
 import numpy as np
 import pandas as pd
+import logging
+import os
+
+# logging.basicConfig()
+# logging.getLogger().setLevel(logging.WARNING)
+
 df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-life', 'TV-nonlife' , 'Own funds', 'Excess'],
           data   = [['Insurer  1', 'life & insurerd',     1000,     800,       0,             200,         200],
                     ['Insurer  2', 'non-life & insurer', 4000,     0,         3200,          800,         800],
@@ -8,32 +14,36 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                     ['Insurer  1', 'life & insurer',     2500,     1800,      0,             700,         700],
                     ['Insurer  2', 'non-life & insurer', 2100,     0,         2200,          200,         200],
                     ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  2', 'non-life & insurerd', 9000,     8800,      0,             200,         200],
-                    ['Insurer  2', 'non-life & insurer', 9000,     0,         8800,          200,         199.99]])
+                    ['Insurer  1', 'life & insurer',     90100,     8800,      0,             200,         200],
+                    ['Insurer  1', 'life & insurer',     91000,     8800,      0,             200,         200],
+                    ['Insurer  2', 'non-life & insurerd', 90030,     8800,      0,             200,         200],
+                    ['Insurer  2', 'non-life & insurer', 90200,     0,         8800,          200,         199.99]])
 
 df['LA'] = 0
 
-# df.set_index(['Name'], inplace=True)
-p1 =     {'name'      : 'sum pattern',
-               'pattern'   : '-->',
-               'P_columns' :['Type'],
-               'Q_columns' :['TV-life', 'TV-nonlife', 'LA'],
-               'parameters': {"min_confidence": 'highest',
-                                      "min_support"   : 2 }}
+# df.set_index(['Name', 'Assets'], inplace=True)
+# p1 =     {'name'      : 'sum pattern',
+#                'pattern'   : '-->',
+#                'P_columns' :['Type'],
+#                'Q_columns' :['TV-life'],
+#                'parameters': {"min_confidence": 'highest',
+#                                       "min_support"   : 2 }}
 miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(p1)
+# df_patterns = miner.find(p1)
+#
+# print(miner.df_patterns.to_string())
+# df_ana = miner.analyze()
+# print(miner.df_results)
+
+p2 = {'name'      : 'Pattern 1',
+    'expression' : 'IF ({.*Ty.*} = "@") THEN ({.*.*} = "@")', 'parameters': {"min_confidence": 0.5,
+                           "min_support"   : 2 }}
+
+df_patterns = miner.find(p2)
 
 print(miner.df_patterns.to_string())
-print(miner.metapatterns)
-print(miner.df_patterns['encodings'].iloc[0])
 df_ana = miner.analyze()
 print(miner.df_results)
-
-
-
-
 
 
 
