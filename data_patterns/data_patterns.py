@@ -1032,8 +1032,10 @@ def derive_results(dataframe = None,
                 if isinstance(colp, list):
                     dataframe['combined_p']= dataframe[colp].values.tolist()
                     colp = 'combined_p'
-                colp = dataframe.columns.get_loc(colp)
-                colq = dataframe.columns.get_loc(colq)
+                if colp != None:
+                    colp = dataframe.columns.get_loc(colp)
+                if colq != None:
+                    colq = dataframe.columns.get_loc(colq)
                 for i in results_ex:
                     k = dataframe.index.get_loc(i)
 
@@ -1080,7 +1082,6 @@ def derive_results(dataframe = None,
                                     values_p,
                                     values_q])
                 for i in results_co:
-                    print(i)
                     k = dataframe.index.get_loc(i)
                     if colp != None:
                         values_p = dataframe.iloc[k, colp]
