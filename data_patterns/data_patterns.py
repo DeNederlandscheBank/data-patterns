@@ -1032,14 +1032,27 @@ def derive_results(dataframe = None,
                 if isinstance(colp, list):
                     dataframe['combined_p']= dataframe[colp].values.tolist()
                     colp = 'combined_p'
-
+                colp = dataframe.columns.get_loc(colp)
+                colq = dataframe.columns.get_loc(colq)
                 for i in results_ex:
+                    k = dataframe.index.get_loc(i)
+
                     if colp != None:
-                        values_p = dataframe.loc[i, colp]
+                        values_p = dataframe.iloc[k, colp]
+                        if isinstance(values_p, object):
+                            if len(values_p) > 1:
+                                values_p = 'Duplicate indices!'
+                            else:
+                                values_p = values_p[0]
                     else:
                         values_p = ""
                     if colq != None:
-                        values_q = dataframe.loc[i, colq]
+                        values_q = dataframe.iloc[k, colq]
+                        if isinstance(values_q, object):
+                            if len(values_q) > 1:
+                                values_q = 'Duplicate indices!'
+                            else:
+                                values_q = values_q[0]
                     else:
                         values_q = ""
 
@@ -1067,12 +1080,24 @@ def derive_results(dataframe = None,
                                     values_p,
                                     values_q])
                 for i in results_co:
+                    print(i)
+                    k = dataframe.index.get_loc(i)
                     if colp != None:
-                        values_p = dataframe.loc[i, colp]
+                        values_p = dataframe.iloc[k, colp]
+                        if isinstance(values_p, object):
+                            if len(values_p) > 1:
+                                values_p = 'Duplicate indices!'
+                            else:
+                                values_p = values_p[0]
                     else:
                         values_p = ""
                     if colq != None:
-                        values_q = dataframe.loc[i, colq]
+                        values_q = dataframe.iloc[k, colq]
+                        if isinstance(values_q, object):
+                            if len(values_q) > 1:
+                                values_q = 'Duplicate indices!'
+                            else:
+                                values_q = values_q[0]
                     else:
                         values_q = ""
                     results.append([True,
