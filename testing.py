@@ -18,34 +18,34 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                     ['Insurer  1', 'life & insurer',     91000,     8800,      0,             200,         200],
                     ['Insurer  2', 'non-life & insurerd', 90030,     8800,      0,             200,         200],
                     ['Insurer  2', 'non-life & insurer', 90200,     0,         8800,          200,         199.99]])
-
-df['LA'] = 0
-
-df.set_index(['Name', 'Assets'], inplace=True)
-print(df)
-p1 =     {'name'      : 'sum pattern',
-               'pattern'   : '-->',
-               'P_columns' :['Type'],
-               'Q_columns' :['TV-life'],
-               'parameters': {"min_confidence": 'highest',
-                                      "min_support"   : 2 }}
-miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(p1)
-
-print(miner.df_patterns.to_string())
-df_ana = miner.analyze()
-print(miner.df_results)
+# 
+# df['LA'] = 0
 #
-p2 = {'name'      : 'Pattern 1',
-    'expression' : 'IF ({.*Ty.*} = "@") THEN ({.*.*} = "@")', 'parameters': {"min_confidence": 0.5,
-                           "min_support"   : 2 }}
-
-df_patterns = miner.find(p2)
-
-print(miner.df_patterns.to_string())
-df_ana = miner.analyze()
-print(miner.df_results)
-
+# df.set_index(['Name', 'Assets'], inplace=True)
+print(df)
+# p1 =     {'name'      : 'sum pattern',
+#                'pattern'   : '-->',
+#                'P_columns' :['Type'],
+#                'Q_columns' :['TV-life'],
+#                'parameters': {"min_confidence": 'highest',
+#                                       "min_support"   : 2 }}
+# miner = data_patterns.PatternMiner(df)
+# df_patterns = miner.find(p1)
+#
+# print(miner.df_patterns.to_string())
+# df_ana = miner.analyze()
+# print(miner.df_results)
+# #
+# p2 = {'name'      : 'Pattern 1',
+#     'expression' : 'IF ({.*Ty.*} = "@") THEN ({.*.*} = "@")', 'parameters': {"min_confidence": 0.5,
+#                            "min_support"   : 2 }}
+#
+# df_patterns = miner.find(p2)
+#
+# print(miner.df_patterns.to_string())
+# df_ana = miner.analyze()
+# print(miner.df_results)
+#
 
 
 
@@ -61,13 +61,13 @@ print(df_patterns.to_string())
 print(df_patterns.loc[0,'pandas co'])
 df_ana = miner.analyze()
 print(miner.df_results)
-pattern ={'name'      : 'sum pattern',
-                          'expression'   : '{.*}=0',
-                          'parameters': {"min_confidence": 0.5,
-                                         "min_support"   : 1}}
-miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(pattern)
-print(df_patterns.to_string())
-print(df_patterns.loc[0,'pandas co'])
-df_ana = miner.analyze()
-print(miner.df_results)
+# pattern ={'name'      : 'sum pattern',
+#                           'expression'   : '{.*}=0',
+#                           'parameters': {"min_confidence": 0.5,
+#                                          "min_support"   : 1}}
+# miner = data_patterns.PatternMiner(df)
+# df_patterns = miner.find(pattern)
+# print(df_patterns.to_string())
+# print(df_patterns.loc[0,'pandas co'])
+# df_ana = miner.analyze()
+# print(miner.df_results)
