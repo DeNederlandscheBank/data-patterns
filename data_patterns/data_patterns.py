@@ -231,6 +231,7 @@ def derive_patterns(dataframe   = None,
     '''
 
     df_patterns = pd.DataFrame(columns = PATTERNS_COLUMNS)
+    dataframe = dataframe.reset_index()
     for metapattern in metapatterns:
         parameters = metapattern.get("parameters", {})
         if "expression" in metapattern.keys():
@@ -980,9 +981,7 @@ def update_statistics(dataframe = None,
                 df_patterns.loc[idx, ERROR] = 'ERROR unknown'
 
             df_new_patterns = df_patterns
-        # deleting the levels of the index to the columns
-        for level in range(len(dataframe.index.names)):
-            del dataframe[dataframe.index.names[level]]
+
     return df_new_patterns
 
 def get_encodings():
@@ -1011,6 +1010,7 @@ def derive_results(dataframe = None,
     encodings = get_encodings()
 
     if (dataframe is not None) and (df_patterns is not None):
+
         df = dataframe.copy()
         results = list()
         for idx in df_patterns.index:
@@ -1145,6 +1145,8 @@ def derive_results(dataframe = None,
         except:
             df_results.index = df_results.index
 
+    for level in range(len(dataframe.index.names)):
+        del dataframe[dataframe.index.names[level]]
     df_results = ResultDataFrame(df_results)
     logging.info(' Rows in analyze: ' + str(df_results.shape[0]))
 

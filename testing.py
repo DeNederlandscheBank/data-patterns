@@ -14,17 +14,17 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                     ['Insurer  1', 'life & insurer',     2500,     1800,      0,             700,         700],
                     ['Insurer  2', 'non-life & insurer', 2100,     0,         2200,          200,         200],
                     ['Insurer  1', 'life & insurer',     9000,     8800,      0,             200,         200],
-                    ['Insurer  1', 'non-life & insurer',     9000,     8800,      0,             200,         200],
+                    ['Insurer  1', 'non-life & insurer',     90200,     8800,      0,             200,         200],
                     ['Insurer  1', 'life & insurer',     91000,     8800,      0,             200,         200],
                     ['Insurer  2', 'non-life & insurerd', 90030,     8800,      0,             200,         200],
                     ['Insurer  2', 'non-life & insurer', 90200,     0,         8800,          200,         199.99]])
 #
 # df['LA'] = 0
 #
-# df.set_index(['Name', 'Assets'], inplace=True)
+# df.set_index(['Excess', 'Assets'], inplace=True)
 print(df)
 p1 = {'name'      : 'equal values',
-                              'expression'   : 'IF {"TV-life"} = 0 THEN {"TV-nonlife"} > 0',
+                              'expression'   : 'IF {"Assets"} > 0 THEN {"TV-nonlife"} >= 0',
                               'parameters': {"min_confidence": 0.5,
                                              "min_support"   : 2}}
 miner = data_patterns.PatternMiner(df)
