@@ -41,15 +41,14 @@ The name of the pattern is shown in the output. It is not necessary to include a
 
 The result is a DataFrame with the patterns that were found. The first part of the DataFrame now contains
 
-+----+--------------+------------+--------------+------------+--------+-----------+----------+
-| id |pattern_id    |P columns   |relation type |Q columns   |support |exceptions |confidence|
-+====+==============+============+==============+============+========+===========+==========+
-|  0 |equal values  |[Own funds] |=             |[Excess]    |9       |1          |0.9       |
-+----+--------------+------------+--------------+------------+--------+-----------+----------+
-|  1 |equal values  |[Excess]    |=             |[Own funds] |9       |1          |0.9       |
-+----+--------------+------------+--------------+------------+--------+-----------+----------+
++----+--------------+---------------------------+----------+-----------+----------+
+| id |pattern_id    |pattern_def                |support   |exceptions |confidence|
++====+==============+===========================+==========+===========+==========+
+|  0 |equal values  | {Own funds} = {Excess}    |9         |1          |0.9       |
++----+--------------+---------------------------+----------+-----------+----------+
 
-The miner finds two patterns; the first states that the 'Own funds'-column is identical to the 'Excess'-column in 9 of the 10 cases (with a confidence of 90 %, there is one case where the equal-pattern does not hold), and the second pattern is identical to the first but with the columns reversed.
+The miner finds one patterns; it states that the 'Own funds'-column is identical to the 'Excess'-column in 9 of the 10 cases (with a confidence of 90 %, there is one case where the equal-pattern does not hold).
+
 
 To analyze data with the generated set of data-patterns use the analyze function with the dataframe with the data as input::
 
@@ -57,20 +56,18 @@ To analyze data with the generated set of data-patterns use the analyze function
 
 The result is a DataFrame with the results. If we select ``result_type = False`` then the first part of the output contains
 
-+-----------+--------------+-------------+------------+-------------+------------+---------+---------+
-|index      |result_type   |pattern_id   |P columns   |relation type|Q columns   |P values |Q values |
-+-----------+--------------+-------------+------------+-------------+------------+---------+---------+
-|Insurer 10 |False         |equal values |[Own funds] |=            |[Excess]    |[200]    |[199.99] |
-+-----------+--------------+-------------+------------+-------------+------------+---------+---------+
-|Insurer 10 |False         |equal values |[Excess]    |=            |[Own funds] |[199.99] |[200]    |
-+-----------+--------------+-------------+------------+-------------+------------+---------+---------+
++-----------+--------------+-------------+---------------------------+----------+-----------+----------+---------+---------+
+|index      |result_type   |pattern_id   |pattern_def                |support   |exceptions |confidence|P values |Q values |
++-----------+--------------+-------------+---------------------------+----------+-----------+----------+---------+---------+
+|Insurer 10 |False         |equal values | {Own funds} = {Excess}    |9         |1          |0.9       |200      |199.99   |
++-----------+--------------+-------------+---------------------------+----------+-----------+----------+---------+---------+
 
 Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum' (see below), and '-->' (association, see below).
 
 Setting the parameters dict
 ---------------------------
 
-Specific parameters of a pattern can be set with a parameters dict. ``min_confidence`` defines the minimum confidence of the patterns to be included in the output and ``min_support`` defines the minimum support of the patterns.
+Specific parameters of a pattern can be set with a parameters dict. ``min_confidence`` defines the minimum confidence of the patterns to be included in the output and ``min_support`` defines the minimum support of the patterns. 
 
 For the =-patterns, you can set the number of decimals for the equality between the values with ``decimal``. So::
 
@@ -82,19 +79,44 @@ For the =-patterns, you can set the number of decimals for the equality between 
 
 would output
 
-+----+--------------+------------+--------------+------------+--------+-----------+----------+
-| id |pattern_id    |P columns   |relation type |Q columns   |support |exceptions |confidence|
-+====+==============+============+==============+============+========+===========+==========+
-|  0 |equal values  |[Own funds] |=             |[Excess]    |10      |0          |1.0       |
-+----+--------------+------------+--------------+------------+--------+-----------+----------+
-|  1 |equal values  |[Excess]    |=             |[Own funds] |10      |0          |1.0       |
-+----+--------------+------------+--------------+------------+--------+-----------+----------+
++----+--------------+---------------------------+----------+-----------+----------+
+| id |pattern_id    |pattern_def                |support   |exceptions |confidence|
++====+==============+===========================+==========+===========+==========+
+|  0 |equal values  | {Own funds} = {Excess}    |10        |0          |1.0       |
++----+--------------+---------------------------+----------+-----------+----------+
 
 because 199.99 is equal to 200 with 0 decimals.
 
 The default value in the =-pattern is 8 decimals.
 
 You do not have to include a paramaters dict. The parameters have default setting with ``min_confidence = 0.75`` and ``min_support = 2``.
+
+Using conditional pattern
+-------------------------
+With the conditional pattern you can find conditional statements between columns, such as IF TV-life = 0 THEN TV-nonlife > 0::
+
+    df_patterns = miner.find({'name'     : 'Pattern 1',
+         'pattern'  : '-->',
+         'P_columns': ['TV-life'],
+         'P_values' : [0],
+         'Q_columns': ['TV-nonlife'],
+         'Q_values' : [0],
+         'parameters' : {"min_confidence" : 0.5, "min_support" : 1,'Q_operators': ['>']}})
+
+results in a DataFrame with
+
++----+--------------+---------------------------------------------------+----------+-----------+----------+
+| id |pattern_id    |pattern_def                                        |support   |exceptions |confidence|
++====+==============+===================================================+==========+===========+==========+
+|  0 |equal values  | IF ({"TV-life"} = 0) THEN ({"TV-nonlife"} > 0)    |4         |0          |1.0       |
++----+--------------+---------------------------------------------------+----------+-----------+----------+
+
+The miner finds one condition; apparently the 'TV-life'-column is four times 0 and 'TV-nonlife' is then larger than 0.
+
+One can define the values, operators and logics. The values are normally set to none and will then try every possible option for the values. The operators are put in the parameters as shown above and are set to '=' when none are given. Logics are the operators between columns such as '&' and '|' (AND, OR). Logics are also put in the parameters as 'Q_logics' or 'P_logics'. These can only be used when we have more than one column in P or Q. This is set to '&' when none are given. 
+
+An easier approach is to use text for a conditional statement. See the Expression chapter for more information.
+
 
 Using the sum-pattern
 ---------------------
@@ -124,23 +146,42 @@ The miner finds four sums; apparently the 'TV-life'-column plus the 'Own funds'-
 
 With an additional parameter ``sum_elements`` you can specify the highest number of elements in the P_columns. But handle with care because to find a high number of elements can take a lot of time. The default value of ``sum_elements`` is 2.
 
+Using expressions
+-----------------
+
+We can also find the same patterns as above using expressions::
+
+    df_patterns = miner.find({'name'      : 'equal values',
+                              'expression'   : '{.*}={.*}',
+                              'parameters': {"min_confidence": 0.5,
+                                             "min_support"   : 2}})
+                                             
+    df_patterns = miner.find({'name'      : 'equal values',
+                              'expression'   : 'IF {"TV-life"} = 0 THEN {"TV-nonlife"} > 0',
+                              'parameters': {"min_confidence": 0.5,
+                                             "min_support"   : 2}})
+                                             
+    df_patterns = miner.find({'name'      : 'sum pattern',
+                              'expression'   : '{.*} + {.*} = {.*}',
+                              'parameters': {"min_confidence": 0.5,
+                                             "min_support"   : 2}})
+
+This will give the same result as the equal, conditional and sum pattern.
+
+Expressions can be written as followed:
+
+1. Put it in a structure like above
+2. Columns are given with '{}', example: '{Assests} > 0'
+3. If you want to find matches with columns you can do '{.*}' (this will match all columns), example: '{.*TV.*} > 0' (will match TV-life and TV-nonlife)
+4. Conditional statements go with IF, THEN together with & and | (and/or), example: 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) & {.*As.*} > 0)' Note: AND is only used when you want the reverse of this statement, such as 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) & {.*As.*} > 0) AND IF ({.*TV-life.*} = 0) THEN ~({.*TV-nonlife.*} = 8800) & {.*As.*} > 0)'
+5. Use "@" if you do not have a specific value, example: 'IF ({.*Ty.*} = "@") THEN ({.*As.*} = "@")'
+
+
 Finding a list of patterns
 --------------------------
 
 You can start the find-function with a dictionary (with one pattern definition) or a list of dictionaries (with a list of pattern definitions).
 
-Exporting to and importing from Excel
--------------------------------------
-
-You can export the df_patterns to Excel with::
-
-    df_patterns.to_excel(filename = "export.xlsx")
-
-The DataFrame contains a specialized function to generate a humanly readable format of the patterns.
-
-You can import a df_pattern from Excel with::
-
-    miner = data_patterns.PatternMiner(df_patterns = data_patterns.read_excel(filename = "export.xlsx"))
 
 Applying encodings
 ------------------
@@ -171,20 +212,6 @@ This pattern-definition finds association patterns ('-->') between 'Type' and wh
 
 So the pattern is that life insurers report Assets, TV-life, and Own funds and nonlife insurers report Assets, TV-nonlife and Own funds. There is one life insurer that does not report according to these patterns.
 
-Retrieving the pattern in XBRL
-------------------------------
-
-The DataFrame ``df_patterns`` contains the patterns represented by as XBRL validation rules. The syntax of the rule follows EIOPA Solvency II validation syntax. To get the code of the first row of the patterns use::
-
-    df_patterns.loc[0, 'xbrl co']
-
-This results in the following string::
-
-    IF (({Type} = "life insurer")) THEN ("Assets" = "reported") and
-    ("Own funds" = "reported") and
-    ("TV-life" = "reported") and ("TV-nonlife" = "not reported")
-
-This assumes that the column names of the DataFrame with which the patterns are produced are defined in the XBRL-taxonomy.
 
 Retrieving the pattern in Pandas
 --------------------------------
