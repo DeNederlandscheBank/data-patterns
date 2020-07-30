@@ -1041,9 +1041,7 @@ def derive_results(dataframe = None,
 
                     if colp != None:
                         values_p = dataframe.iloc[k, colp]
-                        print(type(values_p))
                         if isinstance(values_p, pd.Series):
-                            print('OI')
                             if len(values_p) > 1:
                                 values_p = 'Duplicate indices!'
                             else:
@@ -1051,7 +1049,6 @@ def derive_results(dataframe = None,
                     else:
                         values_p = ""
                     if colq != None:
-                        print(values_p)
 
                         values_q = dataframe.iloc[k, colq]
                         if isinstance(values_q, pd.Series):
