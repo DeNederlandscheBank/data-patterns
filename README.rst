@@ -69,11 +69,11 @@ To generate patterns use the find-function of this object::
 
 The result is a DataFrame with the patterns that were found. The first part of the DataFrame now contains
 
-+----+--------------+---------------------------+----------+--------+-----------+----------+
-| id |pattern_id    |P columns                  |support   |exceptions |confidence|
-+====+==============+===========================+============+========+===========+==========+
++----+--------------+---------------------------+----------+-----------+----------+
+| id |pattern_id    |pattern_def                |support   |exceptions |confidence|
++====+==============+===========================+==========+===========+==========+
 |  0 |equal values  | {Own funds} = {Excess}    |9         |1          |0.9       |
-+----+--------------+---------------------------+------------+--------+-----------+----------+
++----+--------------+---------------------------+----------+-----------+----------+
 
 
 The miner finds two patterns; the first states that the 'Own funds'-column is identical to the 'Excess'-column in 9 of the 10 cases (with a confidence of 90 %, there is one case where the equal-pattern does not hold), and the second pattern is identical to the first but with the columns reversed.
@@ -101,13 +101,11 @@ To analyze data with the generated set of data-patterns use the analyze function
 
 The result is a DataFrame with the results. If we select ``result_type = False`` then the first part of the output contains
 
-+-----------+--------------+-------------+------------+-------------+------------+---------+---------+
-|index      |result_type   |pattern_id   |P columns   |relation type|Q columns   |P values |Q values |
-+-----------+--------------+-------------+------------+-------------+------------+---------+---------+
-|Insurer 10 |False         |equal values |[Own funds] |=            |[Excess]    |[200]    |[199.99] |
-+-----------+--------------+-------------+------------+-------------+------------+---------+---------+
-|Insurer 10 |False         |equal values |[Excess]    |=            |[Own funds] |[199.99] |[200]    |
-+-----------+--------------+-------------+------------+-------------+------------+---------+---------+
++-----------+--------------+-------------+---------------------------+----------+-----------+----------+---------+---------+
+|index      |result_type   |pattern_id   |pattern_def                |support   |exceptions |confidence|P values |Q values |
++-----------+--------------+-------------+---------------------------+----------+-----------+----------+---------+---------+
+|Insurer 10 |False         |equal values | {Own funds} = {Excess}    |9         |1          |0.9       |200      |199.99   |
++-----------+--------------+-------------+---------------------------+----------+-----------+----------+---------+---------+
 
 Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum', and '-->'.
 
