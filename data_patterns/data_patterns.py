@@ -412,7 +412,7 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
     for columns in possibilities:
         possible_expression = expression
         for column in columns: # replace with the possible column value
-            possible_expression = possible_expression.replace(".*", '"' + column + '"', 1) # replace with column
+            possible_expression = possible_expression.replace("{.*}", '{"' + column + '"}', 1) # replace with column
         possible_expressions.append(possible_expression)
     return possible_expressions
 
