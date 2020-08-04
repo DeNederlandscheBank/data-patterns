@@ -24,9 +24,9 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
 # df.set_index(['Excess', 'Assets'], inplace=True)
 print(df)
 p1 = {'name'      : 'equal values',
-                              'expression'   : 'IF {"Assets"} > 0 THEN {"TV-nonlife"} >= 0',
-                              'parameters': {"min_confidence": 0.5,
-                                             "min_support"   : 2}}
+                              'expression'   : 'IF {"Type"} = [.*insurer@] THEN {"TV-nonlife"} = [@]',
+                              'parameters': {"min_confidence": 'highest',
+                                             "min_support"   : 1}}
 miner = data_patterns.PatternMiner(df)
 df_patterns = miner.find(p1)
 

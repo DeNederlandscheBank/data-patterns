@@ -428,16 +428,32 @@ def get_possible_values(amount, possible_expressions, dataframe):
                 value_col = value_col[2:-2] # strip { and }
                 all_columns.append(value_col)
 
-            # print(all_columns)
             all_columns_v = dataframe[all_columns].drop_duplicates().values
-            # print(all_columns_v)
-            for columns_v in all_columns_v: # Make all combinations without duplicates  of values
+
+            items =  re.findall(r'\[(.*?@)\]', possible_expression) # Find the columns
+            del_rows = []
+            for i in range(len(items)):
+                if len(items[i]) > 1: # only when we have a string
+                    item = items[i][:-1]
+                    for j in range(len(all_columns_v)): # check if each column can be used
+                        if re.search(item, all_columns_v[j][i]) is not None:
+                            if re.search(item, all_columns_v[j][i])[0] != all_columns_v[j][i]:
+                                del_rows.append(j)
+                        else:
+                                del_rows.append(j)
+
+                    possible_expression = possible_expression.replace(item, '', 1) # Replace it so that it goes well later
+
+            all_columns_v = np.delete(all_columns_v, del_rows,0) # del rows
+
+
+            for columns_v in all_columns_v:
                 possible_expression_v = possible_expression
                 for column_v in columns_v:
                     if isinstance(column_v, str):
-                        possible_expression_v = possible_expression_v.replace('"@"', '"'+ column_v +'"', 1) # replace adn add ""
+                        possible_expression_v = possible_expression_v.replace('[@]', '"'+ column_v +'"', 1) # replace adn add ""
                     else:
-                        possible_expression_v = possible_expression_v.replace('"@"', str(column_v), 1) # replace with str
+                        possible_expression_v = possible_expression_v.replace('[@]', str(column_v), 1) # replace with str
                 expressions.append(possible_expression_v)
         return expressions
 

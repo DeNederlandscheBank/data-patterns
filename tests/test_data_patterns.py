@@ -260,7 +260,7 @@ class TestData_patterns(unittest.TestCase):
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
         df.set_index('Name', inplace = True)
         p2 = {'name'      : 'Pattern 1',
-            'expression' : 'IF ({.*Ty.*} = "@") THEN ({.*.*} = "@")'}
+            'expression' : 'IF ({.*Ty.*} = [@]) THEN ({.*.*} = [@])'}
         # Expected output
         expected = pd.DataFrame(columns = ['index','pattern_id', 'cluster', 'pattern_def', 'support', 'exceptions',
                                     'confidence'],
