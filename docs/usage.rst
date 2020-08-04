@@ -174,7 +174,7 @@ Expressions can be written as followed:
 2. Columns are given with '{}', example: '{Assests} > 0'
 3. If you want to find matches with columns you can do '{.*}' (this will match all columns), example: '{.*TV.*} > 0' (will match TV-life and TV-nonlife)
 4. Conditional statements go with IF, THEN together with & and | (and/or), example: 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) & {.*As.*} > 0)' Note: AND is only used when you want the reverse of this statement, such as 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) & {.*As.*} > 0) AND IF ({.*TV-life.*} = 0) THEN ~({.*TV-nonlife.*} = 8800) & {.*As.*} > 0)'
-5. Use "@" if you do not have a specific value, example: 'IF ({.*Ty.*} = "@") THEN ({.*As.*} = "@")'
+5. Use [@] if you do not have a specific value, example: 'IF ({.*Ty.*} = [@]) THEN ({.*As.*} = [@])'
 
 
 Finding a list of patterns
