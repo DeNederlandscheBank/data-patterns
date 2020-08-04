@@ -71,10 +71,12 @@ class PatternMiner:
     def find(self, *args, **kwargs):
         '''General function to find patterns
         '''
+        logger = logging.getLogger(__name__)
+
         self.__process_parameters(*args, **kwargs)
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
-        logging.info(' Rows in data: ' + str(self.df_data.shape[0]))
+        logger.info('Rows in data: ' + str(self.df_data.shape[0]))
 
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
 
@@ -229,6 +231,8 @@ def derive_patterns(dataframe   = None,
        - conditional rules ('-->'-pattern defined with their columns) and
        - single rules (defined with their colums)
     '''
+    logger = logging.getLogger(__name__)
+    logger.info('Find started ...')
 
     df_patterns = pd.DataFrame(columns = PATTERNS_COLUMNS)
     dataframe = dataframe.reset_index()
@@ -240,11 +244,11 @@ def derive_patterns(dataframe   = None,
         else:
             patterns = derive_patterns_from_code(metapattern = metapattern,
                                               dataframe = dataframe)
-        logging.info(' Total rows in patterns: ' + str(patterns.shape[0]))
+        logger.info('Total rows in patterns: ' + str(patterns.shape[0]))
         if 'min_confidence' in parameters:
             if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
                 patterns = get_highest_conf(patterns)
-                logging.info(' Reduction of rows in patterns to: ' + str(patterns.shape[0]))
+                logger.info('Reduction of rows in patterns to: ' + str(patterns.shape[0]))
 
         df_patterns = df_patterns.append(patterns, ignore_index = True)
 
@@ -252,6 +256,8 @@ def derive_patterns(dataframe   = None,
     df_patterns[SUPPORT] = df_patterns[SUPPORT].astype(np.int64)
     df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
     df_patterns.index.name = 'index'
+
+    logger.info('Find ended ...')
 
     return PatternDataFrame(df_patterns)
 
@@ -285,7 +291,9 @@ def derive_patterns_from_template_expression(metapattern = None,
 
 
 def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
-    logging.info(' Calling function derive_quantitative_pattern_expression')
+    logger = logging.getLogger(__name__)
+
+    logger.info('Calling function derive_quantitative_pattern_expression')
 
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
@@ -451,7 +459,9 @@ def derive_patterns_from_expression(expression = "",
                                     dataframe = None):
     """
     """
-    logging.info(' Calling function derive_patterns_from_expression')
+    logger = logging.getLogger(__name__)
+
+    logger.info('Calling function derive_patterns_from_expression')
 
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
@@ -484,9 +494,9 @@ def derive_patterns_from_expression(expression = "",
     possible_expressions = add_qoutation(possible_expressions)
     possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe2)
     if len(possible_expressions) > 40:
-        logging.warning(' Amount of possibilities is high! Namely, ' + str(len(possible_expressions)))
+        logger.warning(' Amount of possibilities is high! Namely, ' + str(len(possible_expressions)))
     else:
-        logging.info(' Amount of possibilities: ' + str(len(possible_expressions)))
+        logger.info(' Amount of possibilities: ' + str(len(possible_expressions)))
 
     for possible_expression in possible_expressions:
         # print(possible_expression)
@@ -500,14 +510,15 @@ def derive_patterns_from_expression(expression = "",
             if ((conf >= confidence) and (n_co >= support)):
                 xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
                 patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
+                logger.info("Pattern " + name + " correctly parsed (#co=" + str(co) + ", #ex=" + str(ex) + ")")
         except TypeError as e:
-            logging.Error('Error in trying to process pandas expression: ' +  str(e))
+            logger.error('Error in trying to process pandas expression: ' +  str(e))
             if solvency:
                 patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
             else:
                 continue
         except:
-            logging.Error('Error in trying to process pandas expression: UNKNOWN ERROR')
+            logger.error('Error in trying to process pandas expression: UNKNOWN ERROR')
             if solvency:
                 patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
             else:
@@ -564,7 +575,9 @@ def derive_conditional_pattern(dataframe = None,
     '''Here we derive the patterns from the metapattern definitions
        by evaluating the pandas expressions of all potential patterns
     '''
-    logging.info(' Calling function derive_conditional_pattern')
+    logger = logging.getLogger(__name__)
+
+    logger.info(' Calling function derive_conditional_pattern')
 
     # get items from metapattern definition
     parameters = metapattern.get("parameters", {})
@@ -616,7 +629,9 @@ def derive_quantitative_pattern(metapattern = None,
                                 columns = None,
                                 value = None,
                                 parameters = {}):
-    logging.info(' Calling function derive_quantitative_pattern')
+    logger = logging.getLogger(__name__)
+
+    logger.info(' Calling function derive_quantitative_pattern')
 
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 8)
@@ -779,6 +794,8 @@ def patterns_column_column(dataframe  = None,
                            parameters = {}):
     '''Generate patterns of the form [c1] operator [c2] where c1 and c2 are in columns
     '''
+    logger = logging.getLogger(__name__)
+
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 0)
     parameters['nonzero'] = True
@@ -794,7 +811,7 @@ def patterns_column_column(dataframe  = None,
         for c1 in Q_columns:
             count += 1
             if count == 40:
-                logging.warning(' More than 40 possibilities!')
+                logger.warning(' More than 40 possibilities!')
             if c0 != c1:
                 # applying the filter
                 data_filter = reduce(preprocess_operator, [nonzero[c] for c in [c0, c1]])
@@ -830,6 +847,8 @@ def patterns_sums_column( dataframe  = None,
                          parameters = {}):
     '''Generate patterns of the form sum [c1-list] = [c2] where c1-list is column list and c2 is column
     '''
+    logger = logging.getLogger(__name__)
+
     confidence, support = get_parameters(parameters)
     sum_elements = parameters.get("sum_elements", 2)
     decimal = parameters.get("decimal", 0)
@@ -861,7 +880,7 @@ def patterns_sums_column( dataframe  = None,
             for lhs_columns in itertools.combinations(lhs_column_list, lhs_elements):
                 count += 1
                 if count == 50:
-                    logging.warning(' More than 50 possibilities!')
+                    logger.warning(' More than 50 possibilities!')
                 all_columns = lhs_columns + (rhs_column,)
                 data_filter = np.logical_and.reduce(nonzero[all_columns, :])
                 if data_filter.any():
@@ -918,14 +937,16 @@ def derive_ratio_pattern(dataframe  = None,
 
 def to_pandas_expressions(pattern, encode, parameters, dataframe):
     """Derive pandas code from the pattern definition string both confirmation and exceptions"""
-    logging.debug(' Pattern in: ' + pattern)
+    logger = logging.getLogger(__name__)
+
+    logger.debug(' Pattern in: ' + pattern)
     # preprocessing step
     res = preprocess_pattern(pattern, parameters)
     # datapoints to pandas, i.e. {column} -> df[column]
     res, nonzero_col = datapoints2pandas(res, encode)
     # expression to pandas, i.e. IF X=x THEN Y=y -> df[df[X]=x & df[Y]=y] for confirmations
     co_str, ex_str = expression2pandas(res, nonzero_col, parameters)
-    logging.debug(' Pandas out: ' + co_str)
+    logger.debug(' Pandas out: ' + co_str)
 
     return [co_str, ex_str]
 
@@ -999,13 +1020,16 @@ def derive_results(dataframe = None,
     '''Results (patterns applied to data) are derived
        All info of the patterns is included in the results
     '''
-    logging.info(' Calling function derive_results')
+    logger = logging.getLogger(__name__)
+
+    logger.info('Analyze started ...')
+    logger.info('Shape of df_patterns: ' + str(df_patterns.shape))
 
     if (P_dataframe is not None) and (Q_dataframe is not None):
         try:
             dataframe = P_dataframe.join(Q_dataframe)
         except:
-            print("Join of P_dataframe and Q_dataframe failed, overlapping columns?")
+            logger.error("Join of P_dataframe and Q_dataframe failed, overlapping columns?")
             return []
     encodings = get_encodings()
 
@@ -1112,6 +1136,7 @@ def derive_results(dataframe = None,
                                     df_patterns.loc[idx, "pattern_def"],
                                     values_p,
                                     values_q])
+                logger.info("Pattern " + df_patterns.loc[idx, "pattern_id"] + " correctly parsed (#co=" +str(len(results_co)) + ", #ex=" + str(len(results_ex))+")")
             except TypeError as e:
                 results.append([True,
                                 df_patterns.loc[idx, "pattern_id"],
@@ -1123,7 +1148,7 @@ def derive_results(dataframe = None,
                                 df_patterns.loc[idx, "pattern_def"],
                                 df_patterns.loc[idx, ERROR],
                                 'BUG'])
-                logging.error(' Error in analyze: ' + str(e))
+                logger.error('Error in analyze: ' + str(e))
             except:
                 results.append([True,
                                 df_patterns.loc[idx, "pattern_id"],
@@ -1135,7 +1160,7 @@ def derive_results(dataframe = None,
                                 df_patterns.loc[idx, "pattern_def"],
                                 df_patterns.loc[idx, ERROR],
                                 'BUG'])
-                logging.error(' Error in analyze: UNKOWN')
+                logger.error('Error in analyze: UNKOWN')
 
         df_results = pd.DataFrame(data = results, columns = RESULTS_COLUMNS)
         df_results.sort_values(by = ["index", "confidence", "support"], ascending = [True, False, False], inplace = True)
@@ -1148,8 +1173,8 @@ def derive_results(dataframe = None,
     for level in range(len(dataframe.index.names)):
         del dataframe[dataframe.index.names[level]]
     df_results = ResultDataFrame(df_results)
-    logging.info(' Rows in analyze: ' + str(df_results.shape[0]))
-
+    logger.info('Shape of df_results: ' + str(df_results.shape))
+    logger.info('Analyze ended ...')
     return df_results
 
 
