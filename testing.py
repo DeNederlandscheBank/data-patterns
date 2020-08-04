@@ -34,7 +34,16 @@ print(miner.df_patterns.to_string())
 df_ana = miner.analyze()
 print(miner.df_results)
 # #
-# p2 = {'name'      : 'Pattern 1',
+p2 = {'name'     : 'Condition',
+     'pattern'  : '-->',
+     'P_columns': ['TV-life'],
+     'P_values' : ['[@]'],
+     'Q_columns': ['TV-nonlife'],
+     'Q_values' : [0],
+     'parameters' : {"min_confidence" : 0.5, "min_support" : 1,'Q_operators': ['>']}}
+df_patterns = miner.find(p2)
+
+print(miner.df_patterns.to_string())# p2 = {'name'      : 'Pattern 1',
 #     'expression' : 'IF ({.*Ty.*} = "@") THEN ({.*.*} = "@")', 'parameters': {"min_confidence": 0.5,
 #                            "min_support"   : 2 }}
 #

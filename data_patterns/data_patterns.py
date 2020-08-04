@@ -601,8 +601,8 @@ def derive_conditional_pattern(dataframe = None,
     encode = metapattern.get(ENCODE, {})
     P_columns = metapattern.get("P_columns", list(dataframe.columns.values))
     Q_columns = metapattern.get("Q_columns", list(dataframe.columns.values))
-    P_values = metapattern.get("P_values", ['@']*len(P_columns)) # in case we do not have values
-    Q_values = metapattern.get("Q_values", ['@']*len(Q_columns))
+    P_values = metapattern.get("P_values", ['[@]']*len(P_columns)) # in case we do not have values
+    Q_values = metapattern.get("Q_values", ['[@]']*len(Q_columns))
 
     confidence, support = get_parameters(parameters)
 
@@ -622,12 +622,14 @@ def derive_conditional_pattern(dataframe = None,
             P_values = list(df_features[P_columns].values[idx])
             Q_values = list(df_features[Q_columns].values[idx])
             expression = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, parameters)
+            expression = expression.replace('"[@]"', '[@]')
 
             expressions.append(expression)
 
         return expressions
     # In the case that P and Q values are both given, we only want to compute it for these values and not search for other values like above
     expression = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, parameters)
+    expression = expression.replace('"[@]"', '[@]')
     return [expression]
 
 
