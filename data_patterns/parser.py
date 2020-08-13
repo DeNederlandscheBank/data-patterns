@@ -168,7 +168,6 @@ def preprocess_pattern(pattern, parameters):
     pattern = pattern.replace("<>", "!=")
     pattern = pattern.replace("< >", "!=") # the space between < and > should be deleted in EVA2
     pattern = pattern.replace(';', ",") # this should be corrected in EVA2
-
     if solvency:
         pattern = pattern.replace('"', "'")
         pattern = replace_and_or(pattern)
@@ -228,7 +227,7 @@ def expression2pandas(g, nonzero_col, parameters):
             ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
     else:
         item = re.search(r'(.*)(==)(.*)', g)
-        if item is None or (isinstance(item.group(3),str) and item.group(3)[:2] != 'df' and item.group(3)[:3]!= ' df' and item.group(3)[:1] != '{'): # take out strings except when string is from sum
+        if item is None or (isinstance(item.group(3),str) and 'df[' not in item.group(3)): # take out strings except when string is from sum
             co_str = 'df[('+add_brackets(g)+')&'
             ex_str = 'df[~('+add_brackets(g)+')&'
             if exclude_zero_columns:

@@ -106,7 +106,7 @@ class PatternMiner:
 
         # Get the column names
         colq = get_value(df_results['pattern_def'].iloc[0], 2, 1)
-
+        print(colq)
         df_data.loc[df_data.index.isin(df_results.index), colq] = df_results['correct_value']
         return df_data, df_results # changed data and log what changed
 
@@ -281,7 +281,7 @@ def derive_patterns_from_template_expression(metapattern = None,
     expression = metapattern.get("expression", "")
     parameters = metapattern.get("parameters", {})
     encodings = metapattern.get("encode", {})
-    solvency = parameters.get('solvency', False)
+
     if re.search(r'IF(.*)THEN(.*)', expression):
         new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
     else:
@@ -487,7 +487,6 @@ def derive_patterns_from_expression(expression = "",
     if confidence == 'highest':
         confidence = 0
 
-    solvency = parameters.get('solvency', False)
     patterns = list()
 
     amount = expression.count('.*}') #Amount of columns to be found
@@ -529,16 +528,10 @@ def derive_patterns_from_expression(expression = "",
                 logger.info("Pattern " + name + " correctly parsed (#co=" + str(co) + ", #ex=" + str(ex) + ")")
         except TypeError as e:
             logger.error('Error in trying to process pandas expression: ' +  str(e))
-            if solvency:
-                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
-            else:
-                continue
+            continue
         except:
             logger.error('Error in trying to process pandas expression: UNKNOWN ERROR')
-            if solvency:
-                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
-            else:
-                continue
+            continue
 
     return patterns
 
