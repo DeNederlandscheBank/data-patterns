@@ -28,8 +28,7 @@ Features
 Here is what the package does:
 
 - Generating and evaluating patterns in structured datasets and exporting to Excel and JSON
-- Transforming generated patterns into XBRL validation rules and Pandas code
-- Evaluating reporting data with data quality rules published by De Nederlandsche Bank (to be provided)
+- Transforming generated patterns into Pandas code
 
 Quick overview
 --------------
@@ -95,20 +94,21 @@ Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum', and '-->'.
 
 Read the documentation for more features.
 
-Upload to Pypi
---------------
-
-A good reference is here: https://medium.com/@joel.barmettler/how-to-upload-your-python-package-to-pypi-65edc5fe9c56
+Upload to Pypi (for developers)
+-------------------------------
 
 1. Change the version in setup.py
 2. Go to github.com and navigate to the repository. Next, click on the tab “releases” and then on “Create a new release”. Now, define a Tag verion (it is best to use the same number as you used in your setup.py version-field: v0.1.15 for example). Then click on “publish release”.
 3. Make a Pypi account here: https://pypi.org/manage/projects/
-4. Download twine by typing in your command prompt
+4. Download twine by typing in your command prompt::
 
     pip install twine
+
 5. Get admin rights of the owner of the data_patterns package.
 6. Open your command prompt and go to the folder of data_patterns. Then type
 
     python setup.py sdist
 
     twine upload dist/*
+
+A good reference is here: https://medium.com/@joel.barmettler/how-to-upload-your-python-package-to-pypi-65edc5fe9c56
