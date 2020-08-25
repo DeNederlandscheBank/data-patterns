@@ -55,8 +55,14 @@ expression = '{"S.28.01.01.03,R0200,C0040"} = MAX(0,(MAX(0, {"S.28.01.01.04,R021
 pandas_expressions = data_patterns.to_pandas_expressions(expression, {}, parameters, None)
 # n_ex = eval(pandas_expressions[0], {}, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum})
 print(pandas_expressions[0])
-
-
+expression = '{"S.28.01.01.03,R0200,C0040"} = 44'
+pandas_expressions = data_patterns.to_pandas_expressions(expression, {}, parameters, None)
+# n_ex = eval(pandas_expressions[0], {}, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum})
+print(pandas_expressions[0])
+expression = '{"S.28.01.01.03,R0200,C0040"} = "NET"'
+pandas_expressions = data_patterns.to_pandas_expressions(expression, {}, parameters, None)
+# n_ex = eval(pandas_expressions[0], {}, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum})
+print(pandas_expressions[0])
 
 #
 # pattern ={'name'      : 'sum pattern',

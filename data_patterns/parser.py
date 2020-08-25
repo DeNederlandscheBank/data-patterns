@@ -227,7 +227,8 @@ def expression2pandas(g, nonzero_col, parameters):
             ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
     else:
         item = re.search(r'(.*)(==)(.*)', g)
-        if item is None or (isinstance(item.group(3),str) and 'df[' not in item.group(3)): # take out strings except when string is from sum
+        if item is None or (re.search(r"'(.*)'", item.group(3)) is not None and 'df[' not in item.group(3)): # take out strings except when string is from sum
+
             co_str = 'df[('+add_brackets(g)+')&'
             ex_str = 'df[~('+add_brackets(g)+')&'
             if exclude_zero_columns:
