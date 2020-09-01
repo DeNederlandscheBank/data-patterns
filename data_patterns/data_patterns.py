@@ -42,8 +42,9 @@ class PatternMiner:
     metapatterns : list of dictionaries (optional)
         a metapattern is a dict with
             'name': identifier of the metapattern (optional)
-            'P_columns': columns of dataframe (P part of metapattern)
-            'Q_columns': columns of datafrane (Q part of metapattern)
+            'pattern' / 'expression' : The pattern or expression to be investigated
+            'P_columns': columns of dataframe (P part of metapattern) (optional)
+            'Q_columns': columns of datafrane (Q part of metapattern) (optional)
             'parameters': minimum confidence, patterns with higher confidence are included (optional)
             'encode': encoding definitions of the columns (optional)
 
@@ -167,7 +168,7 @@ class PatternMiner:
         return current
 
 def get_value(pattern, num = 1, col=3):
-    ''' Derive the P (num=1) or Q (num=2) value from a pattern'''
+    ''' Derive the P (num=1) or Q (num=2) value (col=3) or column name (col=1) from a pattern'''
 
     values = []
 
@@ -178,16 +179,16 @@ def get_value(pattern, num = 1, col=3):
         item2 = re.search(r'(.*)[><=](.*)', pattern)
 
         if pattern.count('}') > 2: # sum
-            for match in re.finditer(r'{(.*?)}', item2.group(num)):
+            for match in re.finditer(r'{(.*?)}', item2.group(num)): # get all columns
                 item3 = re.search(r'"(.*)"', match.group(1))
                 values.append(item3.group(1))
 
         else:
-            if '{' in item2.group(2):
-                item3 = re.search(r'{(.*?)}', item2.group(num))
+            if '{' in item2.group(2): # compare column
+                item3 = re.search(r'{(.*?)}', item2.group(num)) # get columns
                 values.append(item3.group(1)[1:-1])
 
-            else:
+            else: # compare value
                 if num == 1:
                     item3 = re.search(r'{(.*?)}', item2.group(1))
                     values.append(item3.group(1)[1:-1])
@@ -226,10 +227,9 @@ def get_value(pattern, num = 1, col=3):
 def derive_patterns(dataframe   = None,
                     metapatterns = None):
     '''Derive patterns from metapatterns
-       In three flavours:
+       In two flavours:
        - expressions (defined as a string),
-       - conditional rules ('-->'-pattern defined with their columns) and
-       - single rules (defined with their colums)
+       - code patterns, which are given by a dictionary
     '''
     logger = logging.getLogger(__name__)
     logger.info('Find started ...')
@@ -239,10 +239,10 @@ def derive_patterns(dataframe   = None,
     for metapattern in metapatterns:
         parameters = metapattern.get("parameters", {})
         if "expression" in metapattern.keys():
-            patterns = derive_patterns_from_template_expression(metapattern = metapattern,
+            patterns = derive_patterns_from_template_expression(metapattern = metapattern, # expression
                                                                 dataframe = dataframe)
         else:
-            patterns = derive_patterns_from_code(metapattern = metapattern,
+            patterns = derive_patterns_from_code(metapattern = metapattern, # code pattern
                                               dataframe = dataframe)
         logger.info('Total rows in patterns: ' + str(patterns.shape[0]))
         if 'min_confidence' in parameters:
@@ -262,6 +262,10 @@ def derive_patterns(dataframe   = None,
     return PatternDataFrame(df_patterns)
 
 def get_highest_conf(df_patterns):
+    """
+    This code takes the highest confidence patterns based on the P expression. This makes it easier to find new conditional patterns,
+    because we do not have to fill in a specific value for the confidence.
+    """
 
     df_patterns['P_val'] = df_patterns['pattern_def'].apply(lambda x: get_value(x, num=1))
 
@@ -276,13 +280,13 @@ def get_highest_conf(df_patterns):
 def derive_patterns_from_template_expression(metapattern = None,
                                              dataframe = None):
     """
-    Here we can add the constructions of expressions from an expression with wildcards
+    Takes the expression and splits it into a condition or quantitative expression
     """
     expression = metapattern.get("expression", "")
     parameters = metapattern.get("parameters", {})
     encodings = metapattern.get("encode", {})
 
-    if re.search(r'IF(.*)THEN(.*)', expression):
+    if re.search(r'IF(.*)THEN(.*)', expression): # conditional
         new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
     else:
         new_list = derive_quantitative_pattern_expression(expression, metapattern, dataframe)
@@ -291,6 +295,10 @@ def derive_patterns_from_template_expression(metapattern = None,
 
 
 def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
+    """
+    This function takes the quantitative expression and finds all necessary values to put it in the right quantitative code. We need
+    to do this, so that we can use numpy. Numpy runs a lot faster than pandas.
+    """
     logger = logging.getLogger(__name__)
 
     logger.info('Calling function derive_quantitative_pattern_expression')
@@ -342,7 +350,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
             pattern += '='
             item3 = item3[1:]
 
-        if '{' in item3:
+        if '{' in item3: # column comparing
             P_columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
             Q_columns = get_possible_columns(item3.count('.*'), item3, dataframe,True)
             Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
@@ -358,7 +366,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
             for pat in compares:
                 patterns.extend(pat)
 
-        else:
+        else: # column value
             columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
             value = float(item3)
             columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
@@ -374,6 +382,10 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
     return patterns
 
 def get_possible_columns(amount, expression, dataframe, quant=False):
+    """
+    Get the possible columns for the conitional expression using regex
+    """
+
     if amount == 0:
         if quant:
             return [expression.strip()[1:-1]]
@@ -417,6 +429,12 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
     return possible_expressions
 
 def get_possible_values(amount, possible_expressions, dataframe):
+
+    """
+    Get the possible values for the conitional expression
+
+    """
+
     if amount < 1: # no values to be found
         return possible_expressions
     else:
@@ -458,6 +476,9 @@ def get_possible_values(amount, possible_expressions, dataframe):
         return expressions
 
 def add_qoutation(possible_expressions):
+    """
+    Add quotation at the right places
+    """
     new_expressions = []
     datapoints = []
     for expression in possible_expressions:
@@ -474,6 +495,7 @@ def derive_patterns_from_expression(expression = "",
                                     metapattern = None,
                                     dataframe = None):
     """
+    Derive pattern from expression string. This will be a condit expression
     """
     logger = logging.getLogger(__name__)
 
@@ -537,8 +559,8 @@ def derive_patterns_from_expression(expression = "",
 
 def derive_patterns_from_code(metapattern = None,
                                 dataframe = None):
-    '''Derive conditional rule patterns
-       If no columns are given, then the algorithm searches for all possibilities
+    '''Derive patterns from code
+       Splits the patterns into conditional and quantitative
     '''
     patterns = list()
 
@@ -581,9 +603,11 @@ def derive_patterns_from_code(metapattern = None,
 
 def derive_conditional_pattern(dataframe = None,
                                metapattern = None):
-    '''Here we derive the patterns from the metapattern definitions
-       by evaluating the pandas expressions of all potential patterns
     '''
+    Derive conditional rule patterns
+    If no columns are given, then the algorithm searches for all possibilities
+    '''
+
     logger = logging.getLogger(__name__)
 
     logger.info(' Calling function derive_conditional_pattern')
@@ -627,6 +651,9 @@ def derive_conditional_pattern(dataframe = None,
 
 
 def get_parameters(parameters):
+    """
+    Gives confidence and support, also if not given in parameters
+    """
     confidence = parameters.get("min_confidence", 0.75)
     support = parameters.get("min_support", 2)
     return confidence, support
@@ -640,6 +667,11 @@ def derive_quantitative_pattern(metapattern = None,
                                 columns = None,
                                 value = None,
                                 parameters = {}):
+
+    """
+    Derives quantitative pattern by splitting it into the right category
+    """
+
     logger = logging.getLogger(__name__)
 
     logger.info(' Calling function derive_quantitative_pattern')
@@ -681,7 +713,8 @@ def derive_quantitative_pattern(metapattern = None,
 
     data_array = dataframe.values.T
     patterns = list()
-    if value is not None:
+
+    if value is not None: # If value is given, compare columns to value
         values = patterns_column_value(dataframe  = dataframe,
                                 value = value,
                                 pattern = pattern,
@@ -691,7 +724,7 @@ def derive_quantitative_pattern(metapattern = None,
         for val in values:
             patterns.extend(val)
 
-    elif pattern == 'percentile':
+    elif pattern == 'percentile': # If percentile, find that
         values = patterns_percentile(dataframe  = dataframe,
                                 pattern = pattern,
                                  pattern_name = pattern_name,
@@ -700,7 +733,7 @@ def derive_quantitative_pattern(metapattern = None,
         for val in values:
             patterns.extend(val)
 
-    elif pattern == 'sum':
+    elif pattern == 'sum': # If sum, then find a sum pattern
         sums = patterns_sums_column(dataframe  = dataframe,
                                  pattern_name = pattern_name,
                                  P_columns  = P_columns,
@@ -712,7 +745,7 @@ def derive_quantitative_pattern(metapattern = None,
     elif pattern == 'ratio':
         # TO DO
         return
-    else:
+    else: # Compare columns with eachother
         compares = patterns_column_column(dataframe  = dataframe,
                                 pattern = pattern,
                                  pattern_name = pattern_name,
@@ -751,7 +784,8 @@ def patterns_column_value(dataframe  = None,
                            pattern_name = "value",
                            columns = None,
                            parameters = {}):
-
+    '''Generate patterns of the form [c1] operator v1 where c1 is in columns and v1 is a value
+    '''
     confidence, support = get_parameters(parameters)
     data_array = dataframe.values.T
 
@@ -771,7 +805,8 @@ def patterns_percentile(dataframe  = None,
                            pattern_name = "percentile",
                            columns = None,
                            parameters = {}):
-
+    '''Generate patterns of the form [c1] <= v1 and >= v2 where c1 is in columns, and v1 and v2 are the upper and lower percentile
+    '''
     confidence, support = get_parameters(parameters)
     data_array = dataframe.values.T
 
@@ -1094,18 +1129,6 @@ def derive_results(dataframe = None,
                     else:
                         values_q = ""
 
-                    # Encode if necessary
-                    # if encode != {}:
-                    #     if not isinstance(values_p, list):
-                    #         values_p = [values_p]
-                    #     if not isinstance(values_q, list):
-                    #         values_q = [values_q]
-                    #     for c in range(len(colq_old)):
-                    #         if colq_old[c] in encode.keys():
-                    #             values_q[c] = eval(str(encode[colq_old[c]])+ "(s)", encodings, {'s': values_q[c]})
-                    #     for c in range(len(colq_old)):
-                    #         if colq_old[c] in encode.keys():
-                    #             values_q[c] = eval(str(encode[colq_old[c]])+ "(s)", encodings, {'s': values_q[c]})
 
                     results.append([False,
                                     df_patterns.loc[idx, "pattern_id"],

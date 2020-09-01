@@ -190,7 +190,7 @@ def datapoints2pandas(s, encode):
         nonzero_col.append("df["+item+"]")
     return res, nonzero_col
 
-def add_brackets(s, decimal = 8):
+def add_brackets(s):
     """Add brackets around expressions with & and |
     """
 
