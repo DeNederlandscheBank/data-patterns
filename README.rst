@@ -64,7 +64,8 @@ To generate patterns use the find-function of this object::
     df_patterns = miner.find({'name'      : 'equal values',
                               'pattern'   : '=',
                               'parameters': {"min_confidence": 0.5,
-                                             "min_support"   : 2}})
+                                             "min_support"   : 2,
+                                             "decimal" : 8}})
 
 The result is a DataFrame with the patterns that were found. The first part of the DataFrame now contains
 
