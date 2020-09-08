@@ -533,12 +533,10 @@ def derive_patterns_from_expression(expression = "",
 
     else:
         dataframe2 = dataframe
-
     # Check for the possible columns and values
     possible_expressions = get_possible_columns(amount, expression, dataframe2)
     possible_expressions = add_qoutation(possible_expressions)
     possible_expressions = get_possible_values(amount_v, possible_expressions, dataframe2)
-
     # Log if it is a high value
     if len(possible_expressions) > 40:
         logger.warning(' Amount of possibilities is high! Namely, ' + str(len(possible_expressions)))
@@ -634,16 +632,18 @@ def derive_conditional_pattern(dataframe = None,
     df_features = dataframe[P_columns + Q_columns].copy()
     # execute dynamic encoding functions
     encodings = get_encodings()
-    # perform encodings on df_features
+
+    # When we encode we have to cut down on possibilities
     if encode != {}:
         for c in df_features.columns:
             if c in encode.keys():
                 df_features[c] = eval(str(encode[c])+ "(s)", encodings, {'s': df_features[c]})
 
+
         expressions = []
         df_features = df_features.drop_duplicates(P_columns + Q_columns)
 
-        # search for all possible values of P and Q
+        # search for all possible values of P and Q, cut down possibilities
         for idx in range(len(df_features.index)):
             P_values = list(df_features[P_columns].values[idx])
             Q_values = list(df_features[Q_columns].values[idx])
@@ -653,7 +653,8 @@ def derive_conditional_pattern(dataframe = None,
             expressions.append(expression)
 
         return expressions
-    # In the case that P and Q values are both given, we only want to compute it for these values and not search for other values like above
+
+    # in the case of no encoding, we leave it as it is
     expression = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, parameters)
     expression = expression.replace('"[@]"', '[@]')
     return [expression]
@@ -1117,24 +1118,24 @@ def derive_results(dataframe = None,
 
                 # Get it in the richt format, list if necessary
                 if isinstance(colq, list):
-                    dataframe['combined_q']= dataframe[colq].values.tolist()
+                    df['combined_q']= df[colq].values.tolist()
                     colq_old = colq
                     colq = 'combined_q'
 
                 if isinstance(colp, list):
-                    dataframe['combined_p']= dataframe[colp].values.tolist()
+                    df['combined_p']= df[colp].values.tolist()
                     colp = 'combined_p'
                 if colp != None:
-                    colp = dataframe.columns.get_loc(colp)
+                    colp = df.columns.get_loc(colp)
                 if colq != None:
-                    colq = dataframe.columns.get_loc(colq)
+                    colq = df.columns.get_loc(colq)
 
                 #
                 for i in results_ex:
-                    k = dataframe.index.get_loc(i)
+                    k = df.index.get_loc(i)
 
                     if colp != None:
-                        values_p = dataframe.iloc[k, colp]
+                        values_p = df.iloc[k, colp]
                         if isinstance(values_p, pd.Series): # If we have a pandas series we might have duplicate indices
                             if len(values_p) > 1:
                                 values_p = 'Duplicate indices!'
@@ -1144,7 +1145,7 @@ def derive_results(dataframe = None,
                         values_p = ""
                     if colq != None:
 
-                        values_q = dataframe.iloc[k, colq]
+                        values_q = df.iloc[k, colq]
                         if isinstance(values_q, pd.Series): # If we have a pandas series we might have duplicate indices
                             if len(values_q) > 1:
                                 values_q = 'Duplicate indices!'
@@ -1166,9 +1167,9 @@ def derive_results(dataframe = None,
                                     values_q])
 
                 for i in results_co:
-                    k = dataframe.index.get_loc(i)
+                    k = df.index.get_loc(i)
                     if colp != None:
-                        values_p = dataframe.iloc[k, colp]
+                        values_p = df.iloc[k, colp]
                         if isinstance(values_p, pd.Series):# If we have a pandas series we might have duplicate indices
                             if len(values_p) > 1:
                                 values_p = 'Duplicate indices!'
@@ -1177,7 +1178,7 @@ def derive_results(dataframe = None,
                     else:
                         values_p = ""
                     if colq != None:
-                        values_q = dataframe.iloc[k, colq]
+                        values_q = df.iloc[k, colq]
                         if isinstance(values_q, pd.Series):# If we have a pandas series we might have duplicate indices
                             if len(values_q) > 1:
                                 values_q = 'Duplicate indices!'
