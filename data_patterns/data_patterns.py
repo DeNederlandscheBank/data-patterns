@@ -913,8 +913,7 @@ def patterns_column_column(dataframe  = None,
                     data_array = initial_data_array[:, data_filter]
                     if data_array.any():
                         if shift: # shift if we have time data
-                            new_arr = shift_array(data_array[c0, :], shift)
-                            print(data_array[c0, :],new_arr, data_array[c1, :])
+                            new_arr = np.roll(data_array[c0, :], shift)
                             co = np.abs(new_arr - data_array[c1, :]) < 1.5 * 10**(-decimal)
                         else:
                         # keep track of duplicates and Calculate using decimal
@@ -941,9 +940,7 @@ def patterns_column_column(dataframe  = None,
                             xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
                             pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
                             yield pattern_data
-def shift_array(array,shift):
-    new_arr = np.roll(array, shift)
-    return new_arr
+
 
 def patterns_sums_column( dataframe  = None,
                          pattern_name = None,
