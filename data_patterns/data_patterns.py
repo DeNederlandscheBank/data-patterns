@@ -146,9 +146,9 @@ class PatternMiner:
         '''
         return to_dataframe(patterns = convert_columns(self.df_patterns, df1, df2))
 
-    def convert_data_to_time(self,df, name_col, year, extra=[]):
+    def convert_data_to_time(self,df_copy, name_col, year, extra=[]):
 
-
+        df = df_copy.copy()
         # change data to get seperate same names per year
         df[name_col]=df[name_col]+' (' + df.groupby([year,name_col]).cumcount().add(1).astype(str) + ')'
         # get names
@@ -162,6 +162,7 @@ class PatternMiner:
             for item in extra:
                 items.append(temp_df[item].values[0])
                 del temp_df[item]
+            temp_df.set_index([year], inplace = True)
             temp_df = temp_df.transpose() # transpose so that we have years as columns
             temp_df.index.names = ['Datapoint']
             temp_df[name_col] = name # Get the deleted columns back
@@ -175,7 +176,8 @@ class PatternMiner:
                 new_df = temp_df
             else:
                 new_df = new_df.append(temp_df)
-            self.df_data = new_df.fillna(0)
+        self.df_data = new_df.fillna(0)
+        self.df_data.columns = self.df_data.columns.astype(str)
         return new_df
 
     def __process_parameters(self, *args, **kwargs):
