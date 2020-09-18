@@ -146,6 +146,38 @@ class PatternMiner:
         '''
         return to_dataframe(patterns = convert_columns(self.df_patterns, df1, df2))
 
+    def convert_data_to_time(self,df, name_col, year, extra=[]):
+
+
+        # change data to get seperate same names per year
+        df[name_col]=df[name_col]+' (' + df.groupby([year,name_col]).cumcount().add(1).astype(str) + ')'
+        # get names
+        names = df[name_col].unique()
+        items = []
+
+        # loop over names to start transform
+        for name in names:
+            temp_df = df[df[name_col] == name]
+            del temp_df[name_col] # del unnecessary columns
+            for item in extra:
+                items.append(temp_df[item].values[0])
+                del temp_df[item]
+            temp_df = temp_df.transpose() # transpose so that we have years as columns
+            temp_df.index.names = ['Datapoint']
+            temp_df[name_col] = name # Get the deleted columns back
+            for i in range(len(extra)):
+                temp_df[extra[i]] = items[i]
+
+            temp_df = temp_df.reset_index()
+            temp_df.set_index([name_col,'Datapoint'], inplace = True) # set index
+            # add data to previous block
+            if name == names[0]:
+                new_df = temp_df
+            else:
+                new_df = new_df.append(temp_df)
+            self.df_data = new_df.fillna(0)
+        return new_df
+
     def __process_parameters(self, *args, **kwargs):
         '''Update variables in the object
         '''
@@ -857,6 +889,8 @@ def patterns_column_column(dataframe  = None,
 
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 0)
+    shift = parameters.get("shift", None)
+
     parameters['nonzero'] = True
     initial_data_array = dataframe.values.T
     # set up boolean masks for nonzero items per column
@@ -878,23 +912,27 @@ def patterns_column_column(dataframe  = None,
                 if data_filter.any():
                     data_array = initial_data_array[:, data_filter]
                     if data_array.any():
-
-                        # keep track of duplicates and Calculate using decimal
-                        if pattern == "=":
-                            co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
-                            if c0 in duplicates:
-                                if c1 in duplicates[c0]:
-                                    continue
-                                else:
-                                    if c1 in duplicates:
-                                        duplicates[c1].append(c0)
-                                    else:
-                                        duplicates[c1] = [c0]
-                            else:
-                                duplicates[c1] = [c0]
-                        # if not = pattern then normal reduce
+                        if shift: # shift if we have time data
+                            new_arr = shift_array(data_array[c0, :], shift)
+                            print(data_array[c0, :],new_arr, data_array[c1, :])
+                            co = np.abs(new_arr - data_array[c1, :]) < 1.5 * 10**(-decimal)
                         else:
-                            co = reduce(operators[pattern], data_array[[c0, c1], :])
+                        # keep track of duplicates and Calculate using decimal
+                            if pattern == "=":
+                                co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
+                                if c0 in duplicates:
+                                    if c1 in duplicates[c0]:
+                                        continue
+                                    else:
+                                        if c1 in duplicates:
+                                            duplicates[c1].append(c0)
+                                        else:
+                                            duplicates[c1] = [c0]
+                                else:
+                                    duplicates[c1] = [c0]
+                            # if not = pattern then normal reduce
+                            else:
+                                co = reduce(operators[pattern], data_array[[c0, c1], :])
                         co_sum, ex_sum, conf = derive_pattern_statistics(co)
                         if (conf >= confidence) and (co_sum >= support):
                             # generate expression
@@ -903,6 +941,9 @@ def patterns_column_column(dataframe  = None,
                             xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
                             pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
                             yield pattern_data
+def shift_array(array,shift):
+    new_arr = np.roll(array, shift)
+    return new_arr
 
 def patterns_sums_column( dataframe  = None,
                          pattern_name = None,
