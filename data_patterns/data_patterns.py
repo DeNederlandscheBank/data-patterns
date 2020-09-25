@@ -87,8 +87,8 @@ class PatternMiner:
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
         logger.info('Rows in data: ' + str(self.df_data.shape[0]))
-
-
+        self.df_data = self.df_data.replace({'\"': "\'"}, regex=True)
+        print("Let's find patterns!")
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
 
 
@@ -179,7 +179,7 @@ class PatternMiner:
         return to_dataframe(patterns = convert_columns(self.df_patterns, df1, df2))
 
 
-    def convert_columns_to_time(self, name_col, year, extra=[]):
+    def convert_columns_to_time(self, name_col, year, extra=[], tqd = False):
 
 
 
@@ -193,8 +193,8 @@ class PatternMiner:
         items = []
 
         count = 0
-        # loop over names to start transform
-        for name in tqdm(iterable=names,total=names.size):
+        # loop over names to start transform, use tqdm if one wants
+        for name in tqdm(iterable=names,total=names.size, disable=tqd,position=0, leave=True):
             count += 1
             temp_df = df[df[name_col] == name]
             del temp_df[name_col] # del columns
@@ -221,6 +221,7 @@ class PatternMiner:
                 except:
                     print('An ERROR has occured')
                     return temp_df
+
         self.df_data = new_df.fillna(0)
         self.df_data.columns = self.df_data.columns.astype(str)
         return new_df
@@ -678,6 +679,8 @@ def derive_patterns_from_expression(expression = "",
 
 
     parameters = metapattern.get("parameters", {})
+    solvency = parameters.get("solvency", True)
+
     name = metapattern.get('name', "No name")
     encode = metapattern.get(ENCODE, {})
     encodings = get_encodings()
@@ -717,8 +720,10 @@ def derive_patterns_from_expression(expression = "",
     else:
         logger.info(' Amount of possibilities: ' + str(len(possible_expressions)))
 
-
-    for possible_expression in possible_expressions:
+    disable = True
+    if len(possible_expressions) > 500:
+        disable =False
+    for possible_expression in tqdm(iterable = possible_expressions, total=len(possible_expressions), disable = disable, position = 0, leave=True):
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
         try: # Some give error so we use try
             n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
@@ -1091,7 +1096,7 @@ def patterns_column_column(dataframe  = None,
 
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 0)
-    shift = parameters.get("shift", None)
+    stiff = parameters.get("stiff", False)
 
 
     parameters['nonzero'] = True
@@ -1102,12 +1107,17 @@ def patterns_column_column(dataframe  = None,
 
 
     preprocess_operator = preprocess[pattern]
-
+    disable = True
+    if len(Q_columns + P_columns) > 20:
+        disable = False
 
     if pattern == "=":
         duplicates = {} # no duplicates
-    for c0 in P_columns:
+    for c0 in tqdm(iterable = P_columns, total=len(P_columns), disable = disable, position = 0, leave=True):
         for c1 in Q_columns:
+            if stiff: # only columns next to eachother
+                if abs(c0-c1) != 1:
+                    continue
             count += 1
             if count == 40:
                 logger.warning(' More than 40 possibilities!')
@@ -1117,26 +1127,23 @@ def patterns_column_column(dataframe  = None,
                 if data_filter.any():
                     data_array = initial_data_array[:, data_filter]
                     if data_array.any():
-                        if shift: # shift if we have time data
-                            new_arr = np.roll(data_array[c0, :], shift)
-                            co = np.abs(new_arr - data_array[c1, :]) < 1.5 * 10**(-decimal)
-                        else:
-                        # keep track of duplicates and Calculate using decimal
-                            if pattern == "=":
-                                co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
-                                if c0 in duplicates:
-                                    if c1 in duplicates[c0]:
-                                        continue
-                                    else:
-                                        if c1 in duplicates:
-                                            duplicates[c1].append(c0)
-                                        else:
-                                            duplicates[c1] = [c0]
+
+                    # keep track of duplicates and Calculate using decimal
+                        if pattern == "=":
+                            co = np.abs(data_array[c0, :] - data_array[c1, :]) < 1.5 * 10**(-decimal)
+                            if c0 in duplicates:
+                                if c1 in duplicates[c0]:
+                                    continue
                                 else:
-                                    duplicates[c1] = [c0]
-                            # if not = pattern then normal reduce
+                                    if c1 in duplicates:
+                                        duplicates[c1].append(c0)
+                                    else:
+                                        duplicates[c1] = [c0]
                             else:
-                                co = reduce(operators[pattern], data_array[[c0, c1], :])
+                                duplicates[c1] = [c0]
+                        # if not = pattern then normal reduce
+                        else:
+                            co = reduce(operators[pattern], data_array[[c0, c1], :])
                         co_sum, ex_sum, conf = derive_pattern_statistics(co)
                         if (conf >= confidence) and (co_sum >= support):
                             # generate expression
@@ -1169,13 +1176,15 @@ def patterns_sums_column( dataframe  = None,
     nonzero = (dataframe.values != 0).T
     n = len(dataframe.columns)
 
-
+    disable = True
+    if len(Q_columns + P_columns) > 20:
+        disable = False
 
 
     count = 0
     neg_col = [1]*len(Q_columns)
     for lhs_elements in range(2, sum_elements + 1):
-        for rhs_column in Q_columns:
+        for rhs_column in tqdm(iterable = Q_columns, total=len(Q_columns), disable = disable, position = 0, leave=True):
             start_array = initial_data_array
             # minus righthandside is taken so we can use sum function for all columns
             try:
@@ -1369,7 +1378,8 @@ def derive_results(dataframe = None,
 
         df = dataframe.copy()
         results = list()
-        for idx in df_patterns.index:
+        print("Let's analyze!")
+        for idx in tqdm(iterable=df_patterns.index, total=df_patterns.shape[0], position=0, leave=True):
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             # print(idx)
