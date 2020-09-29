@@ -87,7 +87,6 @@ class PatternMiner:
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
         logger.info('Rows in data: ' + str(self.df_data.shape[0]))
-        self.df_data = self.df_data.replace({'\"': "\'"}, regex=True)
         print("Let's find patterns!")
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
 
