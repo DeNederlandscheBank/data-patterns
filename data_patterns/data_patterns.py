@@ -27,7 +27,6 @@ __author__ = """De Nederlandsche Bank"""
 __email__ = 'ECDB_berichten@dnb.nl'
 __version__ = '0.1.13'
 
-
 class PatternMiner:
 
 
@@ -69,7 +68,7 @@ class PatternMiner:
     '''
 
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self,*args, **kwargs):
         self.df_data = None
         self.df_patterns = None
         self.metapatterns = None
@@ -87,7 +86,6 @@ class PatternMiner:
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
         logger.info('Rows in data: ' + str(self.df_data.shape[0]))
-        print("Let's find patterns!")
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
 
 
@@ -150,7 +148,7 @@ class PatternMiner:
         self.df_patterns = update_statistics(dataframe = self.df_data, df_patterns = self.df_patterns)
 
 
-        self.df_results = derive_results(**kwargs, df_patterns = self.df_patterns, dataframe = self.df_data)
+        self.df_results = derive_results(**kwargs, df_patterns = self.df_patterns, dataframe = self.df_data, metapatterns = self.metapatterns)
 
 
         return self.df_results
@@ -422,9 +420,10 @@ def derive_patterns_from_template_expression(metapattern = None,
     expression = metapattern.get("expression", "")
     parameters = metapattern.get("parameters", {})
     encodings = metapattern.get("encode", {})
+    expres = parameters.get("expres", False)
 
 
-    if re.search(r'IF(.*)THEN(.*)', expression): # conditional statement
+    if re.search(r'IF(.*)THEN(.*)', expression) or expres: # conditional statement
         new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
     else:
         new_list = derive_quantitative_pattern_expression(expression, metapattern, dataframe)
@@ -565,7 +564,6 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
         all_columns.append(columns)
         expression = expression.replace(datapoint, '{.*}', 1) # Replace it so that it goes well later
 
-
     if quant: # for quantitative expressions
         return all_columns[0]
 
@@ -679,6 +677,7 @@ def derive_patterns_from_expression(expression = "",
 
     parameters = metapattern.get("parameters", {})
     solvency = parameters.get("solvency", True)
+    disable = parameters.get("disable", False)
 
     name = metapattern.get('name', "No name")
     encode = metapattern.get(ENCODE, {})
@@ -719,9 +718,7 @@ def derive_patterns_from_expression(expression = "",
     else:
         logger.info(' Amount of possibilities: ' + str(len(possible_expressions)))
 
-    disable = True
-    if len(possible_expressions) > 500:
-        disable =False
+
     for possible_expression in tqdm(iterable = possible_expressions, total=len(possible_expressions), disable = disable, position = 0, leave=True):
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
         try: # Some give error so we use try
@@ -1096,6 +1093,7 @@ def patterns_column_column(dataframe  = None,
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 0)
     stiff = parameters.get("stiff", False)
+    disable = parameters.get("disable", False)
 
 
     parameters['nonzero'] = True
@@ -1106,9 +1104,6 @@ def patterns_column_column(dataframe  = None,
 
 
     preprocess_operator = preprocess[pattern]
-    disable = True
-    if len(Q_columns + P_columns) > 20:
-        disable = False
 
     if pattern == "=":
         duplicates = {} # no duplicates
@@ -1169,15 +1164,16 @@ def patterns_sums_column( dataframe  = None,
     confidence, support = get_parameters(parameters)
     sum_elements = parameters.get("sum_elements", 2)
     decimal = parameters.get("decimal", 0)
+    disable = parameters.get("disable", False)
+
+
     initial_data_array = dataframe.values.T
     parameters['nonzero'] = True
     # set up boolean masks for nonzero items per column
     nonzero = (dataframe.values != 0).T
     n = len(dataframe.columns)
 
-    disable = True
-    if len(Q_columns + P_columns) > 20:
-        disable = False
+
 
 
     count = 0
@@ -1352,7 +1348,7 @@ def get_encodings():
 def derive_results(dataframe = None,
                    P_dataframe = None,
                    Q_dataframe = None,
-                   df_patterns = None):
+                   df_patterns = None, metapatterns = None):
     '''Results (patterns applied to data) are derived
        All info of the patterns is included in the results
     '''
@@ -1371,14 +1367,16 @@ def derive_results(dataframe = None,
             return []
     encodings = get_encodings()
 
+    parameters = metapatterns[0].get('parameters', {})
+    disable = parameters.get('disable', False)
 
     if (dataframe is not None) and (df_patterns is not None):
 
 
         df = dataframe.copy()
         results = list()
-        print("Let's analyze!")
-        for idx in tqdm(iterable=df_patterns.index, total=df_patterns.shape[0], position=0, leave=True):
+
+        for idx in tqdm(iterable=df_patterns.index, total=df_patterns.shape[0], disable = disable, position=0, leave=True):
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             # print(idx)
