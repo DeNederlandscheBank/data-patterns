@@ -722,8 +722,8 @@ def derive_patterns_from_expression(expression = "",
     for possible_expression in tqdm(iterable = possible_expressions, total=len(possible_expressions), disable = disable, position = 0, leave=True):
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
         try: # Some give error so we use try
-            n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
-            n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+            n_co = len(eval(pandas_expressions[0], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index)
+            n_ex = len(eval(pandas_expressions[1], encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index)
             conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
             if ((conf >= confidence) and (n_co >= support)):
                 xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
@@ -1308,8 +1308,8 @@ def update_statistics(dataframe = None,
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
             try:
-                n_co = len(eval(pandas_co, encodings,{'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
-                n_ex = len(eval(pandas_ex, encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index)
+                n_co = len(eval(pandas_co, encodings,{'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index)
+                n_ex = len(eval(pandas_ex, encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index)
                 total = n_co + n_ex
                 if total > 0:
                     conf = np.round(n_co / total, 4)
@@ -1384,8 +1384,8 @@ def derive_results(dataframe = None,
 
 
             try:
-                results_ex = eval(pandas_ex, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index.values.tolist()
-                results_co = eval(pandas_co, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum}).index.values.tolist()
+                results_ex = eval(pandas_ex, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum,'ABS': np.abs}).index.values.tolist()
+                results_co = eval(pandas_co, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index.values.tolist()
 
 
                 # Get the correct P and Q values that were given for each row
