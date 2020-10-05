@@ -8,7 +8,6 @@ import unittest
 import os
 from data_patterns import data_patterns
 import pandas as pd
-from tqdm import tqdm
 
 class TestData_patterns(unittest.TestCase):
     """Tests for `data_patterns` package."""

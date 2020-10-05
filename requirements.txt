@@ -1,4 +1,5 @@
 pip
+tqdm
 bump2version==0.5.11
 wheel==0.33.6
 watchdog==0.9.0
@@ -14,4 +15,3 @@ xlsxwriter==1.1.8
 xlrd>=1.0.0
 docutils<0.16,>=0.10
 colorama<0.4.2,>=0.2.5
-tqdm
