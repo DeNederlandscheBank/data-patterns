@@ -1366,7 +1366,8 @@ def derive_results(dataframe = None,
             logger.error("Join of P_dataframe and Q_dataframe failed, overlapping columns?")
             return []
     encodings = get_encodings()
-
+    if metapatterns == None:
+        metapatterns = [{}]
     parameters = metapatterns[0].get('parameters', {})
     disable = parameters.get('disable', False)
 
