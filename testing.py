@@ -43,7 +43,6 @@ df.set_index('Year', inplace = True)
 
 
 miner = data_patterns.PatternMiner(df)
-miner.convert_data_to_time(df,'Name', 'Year', ['volgnummer'])
 
 print(miner.df_patterns)
 
