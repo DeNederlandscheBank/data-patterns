@@ -17,7 +17,7 @@ History
 
     Parameters
     
-1. 'stiff' (boolean): If you set this to True, it will only compare columns next to eachother instead of all columns.
+1. 'window' (boolean): Only compares columns in a window of n, so [column-n, column+n].
 
 2. 'disable' (boolean): If you set this to True, it will disable all tqdm progress bars for finding and analyzing patterns.
 
