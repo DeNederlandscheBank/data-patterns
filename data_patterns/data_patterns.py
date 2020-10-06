@@ -73,6 +73,7 @@ class PatternMiner:
         self.df_patterns = None
         self.metapatterns = None
         self.df_results = None
+        self.cluster = None
         self.__process_parameters(*args, **kwargs)
 
 
@@ -86,15 +87,18 @@ class PatternMiner:
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
         logger.info('Rows in data: ' + str(self.df_data.shape[0]))
+
+        if 'cluster' in self.metapatterns[0].keys(): # need it to save
+            self.cluster = self.metapatterns[0]['cluster']
+
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
 
-
+        self.metapatterns[0]['cluster'] = self.cluster # redo cluster
         if (not kwargs.get('append', False)) or (self.df_patterns is None):
             self.df_patterns = new_df_patterns
         else:
             if len(new_df_patterns.index) > 0:
                 self.df_patterns.append(new_df_patterns)
-
 
         return self.df_patterns
 
@@ -145,7 +149,7 @@ class PatternMiner:
         assert self.df_data is not None, "No data defined."
 
 
-        self.df_patterns = update_statistics(dataframe = self.df_data, df_patterns = self.df_patterns)
+        self.df_patterns = update_statistics(dataframe = self.df_data, df_patterns = self.df_patterns,metapatterns = self.metapatterns)
 
 
         self.df_results = derive_results(**kwargs, df_patterns = self.df_patterns, dataframe = self.df_data, metapatterns = self.metapatterns)
@@ -363,23 +367,44 @@ def derive_patterns(dataframe   = None,
 
     for metapattern in metapatterns:
         parameters = metapattern.get("parameters", {})
-        if "expression" in metapattern.keys():
-            patterns = derive_patterns_from_template_expression(metapattern = metapattern, # expression
-                                                                dataframe = dataframe)
+        cluster = metapattern.get("cluster", 0)
+        if cluster != 0: # Clusters
+            clusters = dataframe[cluster].unique() # get possible clusters
+            for i in clusters:
+                new_data = dataframe[dataframe[cluster] == i] # get only that data
+                metapattern['cluster'] = i
+                if "expression" in metapattern.keys():
+                    patterns = derive_patterns_from_template_expression(metapattern = metapattern, # expression
+                                                                        dataframe = new_data)
+                else:
+                    patterns = derive_patterns_from_code(metapattern = metapattern, # code pattern
+                                                      dataframe = new_data)
+                logger.info('Total rows in patterns: ' + str(patterns.shape[0]))
+                if 'min_confidence' in parameters:
+                    if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
+                        patterns = get_highest_conf(patterns)
+                        logger.info('Reduction of rows in patterns to: ' + str(patterns.shape[0]))
+
+
+                df_patterns = df_patterns.append(patterns, ignore_index = True)
         else:
-            patterns = derive_patterns_from_code(metapattern = metapattern, # code pattern
-                                              dataframe = dataframe)
-        logger.info('Total rows in patterns: ' + str(patterns.shape[0]))
-        if 'min_confidence' in parameters:
-            if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
-                patterns = get_highest_conf(patterns)
-                logger.info('Reduction of rows in patterns to: ' + str(patterns.shape[0]))
+            if "expression" in metapattern.keys():
+                patterns = derive_patterns_from_template_expression(metapattern = metapattern, # expression
+                                                                    dataframe = dataframe)
+            else:
+                patterns = derive_patterns_from_code(metapattern = metapattern, # code pattern
+                                                  dataframe = dataframe)
+            logger.info('Total rows in patterns: ' + str(patterns.shape[0]))
+            if 'min_confidence' in parameters:
+                if parameters['min_confidence'] == 'highest': # For when you want the highest confidence in a pattern
+                    patterns = get_highest_conf(patterns)
+                    logger.info('Reduction of rows in patterns to: ' + str(patterns.shape[0]))
 
 
-        df_patterns = df_patterns.append(patterns, ignore_index = True)
+            df_patterns = df_patterns.append(patterns, ignore_index = True)
 
-
-    df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
+    if cluster == 0 :
+        df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
     df_patterns[SUPPORT] = df_patterns[SUPPORT].astype(np.int64)
     df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
     df_patterns.index.name = 'index'
@@ -446,6 +471,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
 
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
+    cluster = metapattern.get('cluster', 0)
 
 
     confidence, support = get_parameters(parameters)
@@ -487,7 +513,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
                                  pattern_name = name,
                                  P_columns  = P_columns,
                                  Q_columns  = Q_columns,
-                                 parameters = parameters)
+                                 parameters = parameters,cluster=cluster)
         for pat in sums:
             patterns.extend(pat)
     else:
@@ -513,7 +539,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
                                      pattern_name = name,
                                      P_columns  = P_columns,
                                      Q_columns  = Q_columns,
-                                     parameters = parameters)
+                                     parameters = parameters,cluster=cluster)
             for pat in compares:
                 patterns.extend(pat)
 
@@ -528,7 +554,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
                                      pattern = pattern,
                                      pattern_name = name,
                                      columns = columns,
-                                     parameters = parameters)
+                                     parameters = parameters,cluster=cluster)
             for val in values:
                 patterns.extend(val)
     return patterns
@@ -678,6 +704,7 @@ def derive_patterns_from_expression(expression = "",
     parameters = metapattern.get("parameters", {})
     solvency = parameters.get("solvency", True)
     disable = parameters.get("disable", False)
+    cluster = metapattern.get("cluster", 0)
 
     name = metapattern.get('name', "No name")
     encode = metapattern.get(ENCODE, {})
@@ -718,7 +745,6 @@ def derive_patterns_from_expression(expression = "",
     else:
         logger.info(' Amount of possibilities: ' + str(len(possible_expressions)))
 
-
     for possible_expression in tqdm(iterable = possible_expressions, total=len(possible_expressions), disable = disable, position = 0, leave=True):
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
         try: # Some give error so we use try
@@ -727,18 +753,18 @@ def derive_patterns_from_expression(expression = "",
             conf = np.round(n_co / (n_co + n_ex + 1e-11), 4)
             if ((conf >= confidence) and (n_co >= support)):
                 xbrl_expressions = to_xbrl_expressions(possible_expression, encode, parameters)
-                patterns.extend([[[name, 0], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
+                patterns.extend([[[name, cluster], possible_expression, [n_co, n_ex, conf]] + pandas_expressions + xbrl_expressions + ['']])
             logger.info("Pattern " + name + " correctly parsed (#co=" + str(n_co)+", #ex="+str(n_ex)+")")
         except TypeError as e:
             logger.error('Error in trying to process pandas expression: ' +str(e) + ' : ' + pandas_expressions[0])
             if solvency:
-                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
+                patterns.extend([[[name, cluster], possible_expression, [0, 0, 0]] + ['', ''] + ['', ''] + [str(e)]])
             else:
                 continue
         except:
             logger.error('Error in trying to process pandas expression: UNKNOWN ERROR : ' + pandas_expressions[0])
             if solvency:
-                patterns.extend([[[name, 0], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
+                patterns.extend([[[name, cluster], possible_expression, [0, 0, 0]] + ['',''] + ['', ''] + ['UNKNOWN ERROR']])
             else:
                 continue
 
@@ -900,6 +926,7 @@ def derive_quantitative_pattern(metapattern = None,
     decimal = parameters.get("decimal", 8)
     P_dataframe = metapattern.get("P_dataframe", None)
     Q_dataframe = metapattern.get("Q_dataframe", None)
+    cluster = metapattern.get("cluster", 0)
 
 
     if (P_dataframe is not None) and (Q_dataframe is not None):
@@ -947,7 +974,7 @@ def derive_quantitative_pattern(metapattern = None,
                                 pattern = pattern,
                                  pattern_name = pattern_name,
                                  columns = columns,
-                                 parameters = parameters)
+                                 parameters = parameters, cluster= cluster)
         for val in values:
             patterns.extend(val)
 
@@ -957,7 +984,7 @@ def derive_quantitative_pattern(metapattern = None,
                                 pattern = pattern,
                                  pattern_name = pattern_name,
                                  columns = columns,
-                                 parameters = parameters)
+                                 parameters = parameters,cluster= cluster)
         for val in values:
             patterns.extend(val)
 
@@ -967,7 +994,7 @@ def derive_quantitative_pattern(metapattern = None,
                                  pattern_name = pattern_name,
                                  P_columns  = P_columns,
                                  Q_columns  = Q_columns,
-                                 parameters = parameters)
+                                 parameters = parameters,cluster= cluster)
         for pat in sums:
             patterns.extend(pat)
 
@@ -983,7 +1010,7 @@ def derive_quantitative_pattern(metapattern = None,
                                  pattern_name = pattern_name,
                                  P_columns  = P_columns,
                                  Q_columns  = Q_columns,
-                                 parameters = parameters)
+                                 parameters = parameters,cluster= cluster)
         for pat in compares:
             patterns.extend(pat)
 
@@ -1020,7 +1047,7 @@ def patterns_column_value(dataframe  = None,
                            pattern    = None,
                            pattern_name = "value",
                            columns = None,
-                           parameters = {}):
+                           parameters = {},cluster= 0):
     '''Generate patterns of the form [c1] operator v1 where c1 is in columns and v1 is a value
     '''
     confidence, support = get_parameters(parameters)
@@ -1034,7 +1061,7 @@ def patterns_column_value(dataframe  = None,
             possible_expression = generate_single_expression([dataframe.columns[c]], value, pattern)
             pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
             xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
-            pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
+            pattern_data = [[[pattern_name, cluster], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
             yield pattern_data
 
 
@@ -1042,7 +1069,7 @@ def patterns_percentile(dataframe  = None,
                            pattern    = None,
                            pattern_name = "percentile",
                            columns = None,
-                           parameters = {}):
+                           parameters = {}, cluster =0):
     '''Generate patterns of the form [c1] <= v1 and >= v2 where c1 is in columns, and v1 and v2 are the upper and lower percentile
     '''
     confidence, support = get_parameters(parameters)
@@ -1073,7 +1100,7 @@ def patterns_percentile(dataframe  = None,
             possible_expression = generate_single_expression([dataframe.columns[c]], [lower, upper], pattern)
             pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
             xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
-            pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
+            pattern_data = [[[pattern_name, cluster], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
             yield pattern_data
 
 
@@ -1084,7 +1111,7 @@ def patterns_column_column(dataframe  = None,
                            pattern_name = "column",
                            P_columns  = None,
                            Q_columns  = None,
-                           parameters = {}):
+                           parameters = {},cluster=0):
     '''Generate patterns of the form [c1] operator [c2] where c1 and c2 are in columns
     '''
     logger = logging.getLogger(__name__)
@@ -1092,7 +1119,7 @@ def patterns_column_column(dataframe  = None,
 
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 0)
-    stiff = parameters.get("stiff", False)
+    window = parameters.get("window", None)
     disable = parameters.get("disable", False)
 
 
@@ -1109,8 +1136,8 @@ def patterns_column_column(dataframe  = None,
         duplicates = {} # no duplicates
     for c0 in tqdm(iterable = P_columns, total=len(P_columns), disable = disable, position = 0, leave=True):
         for c1 in Q_columns:
-            if stiff: # only columns next to eachother
-                if abs(c0-c1) != 1:
+            if window: # only columns next to eachother
+                if abs(c0-c1) > window:
                     continue
             count += 1
             if count == 40:
@@ -1144,7 +1171,7 @@ def patterns_column_column(dataframe  = None,
                             possible_expression = generate_single_expression([dataframe.columns[c0]], [dataframe.columns[c1]], pattern)
                             pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
                             xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
-                            pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
+                            pattern_data = [[[pattern_name, cluster], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
                             yield pattern_data
 
 
@@ -1154,7 +1181,7 @@ def patterns_sums_column( dataframe  = None,
                          pattern_name = None,
                          P_columns  = None,
                          Q_columns  = None,
-                         parameters = {}):
+                         parameters = {},cluster=0):
     '''
     Generate patterns of the form sum [c1-list] = [c2] where c1-list is column list and c2 is column
     '''
@@ -1211,7 +1238,7 @@ def patterns_sums_column( dataframe  = None,
                         possible_expression = generate_single_expression([dataframe.columns[c] for c in lhs_columns], [dataframe.columns[rhs_column]], 'sum', [neg_col[c] for c in all_columns])
                         pandas_expressions = to_pandas_expressions(possible_expression, {}, parameters, dataframe)
                         xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
-                        pattern_data = [[[pattern_name, 0], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
+                        pattern_data = [[[pattern_name, cluster], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
                         yield pattern_data
 
 
@@ -1273,7 +1300,6 @@ def to_pandas_expressions(pattern, encode, parameters, dataframe):
     co_str, ex_str = expression2pandas(res, nonzero_col, parameters)
     logger.debug(' Pandas out: ' + co_str)
 
-
     return [co_str, ex_str]
 
 
@@ -1294,7 +1320,7 @@ def to_dataframe(patterns = None, parameters = {}, encodings={}):
 
 
 def update_statistics(dataframe = None,
-                      df_patterns = None):
+                      df_patterns = None, metapatterns = None):
     '''Update statistics in df_patterns with statistics from the data by evaluating pandas expressions
     '''
     encodings = get_encodings()
@@ -1307,9 +1333,13 @@ def update_statistics(dataframe = None,
             # Calculate pattern statistics (from evaluating pandas expressions)
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
+            if df_patterns.loc[idx, CLUSTER] != 0:
+                new_dataframe = dataframe[dataframe[metapatterns[0]['cluster']]==df_patterns.loc[idx, CLUSTER]]
+            else:
+                new_dataframe = dataframe
             try:
-                n_co = len(eval(pandas_co, encodings,{'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index)
-                n_ex = len(eval(pandas_ex, encodings, {'df': dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index)
+                n_co = len(eval(pandas_co, encodings,{'df': new_dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index)
+                n_ex = len(eval(pandas_ex, encodings, {'df': new_dataframe, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index)
                 total = n_co + n_ex
                 if total > 0:
                     conf = np.round(n_co / total, 4)
