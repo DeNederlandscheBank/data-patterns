@@ -131,3 +131,9 @@ Latest changes
     Expression
 
 1. You can use ABS in expressions. This calculates the absolute value. So something like 'ABS({'X'} - {'Y'}) = {'Z'})'
+
+
+
+    cluster
+    
+1. You can now add the column name on which you want to cluster
