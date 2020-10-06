@@ -12,8 +12,32 @@ History
 
 * First release on PyPI.
 
+
+ < 0.1.17 (2020-10-6)
+---------------------
+    
+    Expression
+    
+You can now use expressions to find patterns. This is a string such as '{.*}={.*}' (this one will find columns that are equal to eachother). See example in usage as how to do it, also with unknown values. 
+
+Patterns of the for IF THEN will be done through a pandas expression and quantitative patterns will be found using numpy (quicker). Expression will be split up in parts if it is quantitative
+
+    Function
+   
+Added the function correct_data. This corrects data based on the most common value if grouped with another column, e.g. changes the names in a column if there are multiple names per LEI code. 
+
+
+    Other
+    
+1. Added P and Q values to analyze
+
+2. highest_conf option to find the pattern with the highest conf based on P value.
+
+3. Possible to use with EVA2 rules
+
+
 0.1.17 (2020-10-6)
---------------
+------------------
 
     Parameters
     
@@ -34,3 +58,15 @@ History
     cluster
     
 1. You can now add the column name on which you want to cluster
+
+
+    Function
+    
+1. Convert_to_time: merge periodes together by adding suffix to columns (t-1) and (t).
+
+2. convert_columns_to_time: Make the periods into columns so that you have years as columns.
+
+
+    Other
+    
+1. Add tqdm progress bars 
