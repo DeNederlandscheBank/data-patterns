@@ -86,6 +86,9 @@ class PatternMiner:
         self.__process_parameters(*args, **kwargs)
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
+        self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('"', ""))
+        self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('\'', ""))
+
         logger.info('Rows in data: ' + str(self.df_data.shape[0]))
 
         if 'cluster' in self.metapatterns[0].keys(): # need it to save
