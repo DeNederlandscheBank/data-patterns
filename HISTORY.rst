@@ -70,3 +70,11 @@ Added the function correct_data. This corrects data based on the most common val
     Other
     
 1. Add tqdm progress bars 
+
+
+0.1.19 (coming soon)
+--------------------
+
+    variables to miner
+    
+You can now add a boolean to the miner. If you give the boolean True to the miner, it will get rid of all the " and ' in the string data. This is needed for some data where name have those characters in their name. This will give errors later on if not removed.
