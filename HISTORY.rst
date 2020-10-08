@@ -13,7 +13,7 @@ History
 * First release on PyPI.
 
 
- < 0.1.17 (2020-10-6)
+< 0.1.17 (2020-10-6)
 ---------------------
     
     Expression
