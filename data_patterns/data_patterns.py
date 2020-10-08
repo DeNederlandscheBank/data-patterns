@@ -205,6 +205,7 @@ class PatternMiner:
                 items.append(temp_df[item].values[0])
                 del temp_df[item]
             temp_df.set_index([year], inplace = True)
+            temp_df.index.names = [None] # get rid of period
             temp_df = temp_df.transpose() # transpose so that we have years as columns
             temp_df.index.names = ['Datapoint']
             temp_df[name_col] = name # Get the deleted columns back
