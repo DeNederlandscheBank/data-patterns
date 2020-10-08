@@ -8,7 +8,7 @@ import os
 # logging.getLogger().setLevel(logging.WARNING)
 
 df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-life', 'TV-nonlife' , 'Own funds', 'Excess'],
-                  data   = [['Insurer  1', 'life insurer',     1000,     800,       0,             200,         200],
+                  data   = [['Insurer  1', 0,     1000,     800,       0,             200,         200],
                             ['Insurer  2', 'non-life insurerx', 4000,     0,         3200,          800,         800],
                             ['Insurer  3', 'non-life insurer', 800,      0,         700,           100,         100],
                             ['Insurer  4', 'life insu"rer',     2500,     1800,      0,             700,         700],
@@ -22,8 +22,9 @@ df.set_index('Name', inplace = True)
 
 p1 = {'name'     : 'Pattern 1', 'expression':'IF {.*TV-l.*} =[@] THEN {.*Typ.*}= [@]'}
 miner = data_patterns.PatternMiner(df)
-df_patterns = miner.find(p1)
 print(miner.df_data)
+
+df_patterns = miner.find(p1)
 
 df_ana = miner.analyze()
 print(df_patterns.to_string())
