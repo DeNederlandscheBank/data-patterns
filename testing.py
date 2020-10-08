@@ -24,10 +24,5 @@ p1 = {'name'     : 'Pattern 1', 'expression':'IF {.*TV-l.*} =[@] THEN {.*Typ.*}=
 miner = data_patterns.PatternMiner(df)
 print(miner.df_data)
 
-df_patterns = miner.find(p1)
-
-df_ana = miner.analyze()
-print(df_patterns.to_string())
-print(df_patterns['pandas co'][0])
-df_cor = miner.correct_data()
-print(df_cor)
+df_patterns = miner.find(p1,True)
+print(miner.df_data)

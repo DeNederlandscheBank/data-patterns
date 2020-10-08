@@ -74,6 +74,7 @@ class PatternMiner:
         self.metapatterns = None
         self.df_results = None
         self.cluster = None
+        self.clean_quotation = None
         self.__process_parameters(*args, **kwargs)
 
 
@@ -262,11 +263,12 @@ class PatternMiner:
         self.metapatterns = self.__process_key('metapatterns', list, self.metapatterns, *args, **kwargs)
         self.df_patterns = self.__process_key('df_patterns', None, self.df_patterns, *args, **kwargs)
         self.df_data = self.__process_key('dataframe', pd.DataFrame, self.df_data, *args, **kwargs)
+        self.clean_quotation = self.__process_key('clean_quotation', bool, self.clean_quotation, *args, **kwargs)
 
 
         if isinstance(self.metapatterns, dict):
             self.metapatterns = [self.metapatterns]
-        if isinstance(self.df_data, pd.DataFrame):
+        if self.clean_quotation:
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].astype(str)
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('"', ''))
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('\'', ""))
@@ -708,7 +710,7 @@ def derive_patterns_from_expression(expression = "",
 
 
     parameters = metapattern.get("parameters", {})
-    solvency = parameters.get("solvency", True)
+    solvency = parameters.get("solvency", False)
     disable = parameters.get("disable", False)
     cluster = metapattern.get("cluster", 0)
 
