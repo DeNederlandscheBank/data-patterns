@@ -272,7 +272,7 @@ class PatternMiner:
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].astype(str)
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('"', ''))
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('\'', ""))
-
+            self.clean_quotation = False
 
         return None
 
