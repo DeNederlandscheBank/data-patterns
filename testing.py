@@ -19,10 +19,10 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                             ['Insurer  9', 'non-life insurer', 9000,     0,         8800,          200,         200],
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
-
-p1 = {'name'     : 'Pattern 1', 'expression':'IF {.*TV-l.*} =[@] THEN {.*Typ.*}= [@]'}
+df['LA'] = 100
+p1 = {'name'     : 'Pattern 1', 'expression':'IF {.*TV-l.*} =[@] THEN {.*Ty.*}= [@]'}
 miner = data_patterns.PatternMiner(df)
 print(miner.df_data)
 
 df_patterns = miner.find(p1,True)
-print(miner.df_data)
+print(df_patterns)
