@@ -19,6 +19,7 @@ from .transform import *
 from .encodings import *
 from .parser import *
 import logging
+import ast
 logging.basicConfig(filename='logger.log',format='%(levelname)s:%(message)s',level=logging.DEBUG)
 #import optimized
 
@@ -1622,3 +1623,18 @@ def find_redundant_patterns(df_patterns = None):
                             if (df_patterns.loc[row, 'confidence'] <= df_patterns.loc[row2, 'confidence']) and (df_patterns.loc[row, 'support'] <= df_patterns.loc[row2, 'support']):
                                 df_patterns.loc[row, 'pattern status'] = "redundant with pattern " + str(row2)
     return df_patterns
+
+def string_to_dict(dict_string):
+    # Convert to proper json format
+    dict_string = dict_string.replace("'", '"').replace('u"', '"')
+    return ast.literal_eval(dict_string)
+
+def load_overzicht(path, name, tab=0, metapattern='metapattern', template='template'):
+    result = {}
+    df = pd.read_excel(path+name, sheet_name=tab)
+    datas = df[template].unique()
+    for data in datas:
+        temp = df[df[template]==data]
+        result[data] = temp[metapattern].apply(string_to_dict).values
+
+    return result

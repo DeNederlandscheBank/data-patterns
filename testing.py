@@ -19,10 +19,13 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                             ['Insurer  9', 'non-life insurer', 9000,     0,         8800,          200,         200],
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
-df['LA'] = 100
-p1 = {'name'     : 'Pattern 1', 'expression':'IF {.*TV-l.*} =[@] THEN {.*Ty.*}= [@]'}
-miner = data_patterns.PatternMiner(df)
-print(miner.df_data)
+# df['LA'] = None
+# df['LB'] = None
+# p1 = {'name'     : 'Pattern 1', 'expression':'ABS({"LB"} - {"LA"}) <= ABS({"LA"})*0.1', 'parameters':{'min_conf':0,'expres':True}}
+# miner = data_patterns.PatternMiner(df)
+#
+# df_patterns = miner.find(p1)
+# print(df_patterns)
 
-df_patterns = miner.find(p1,True)
-print(df_patterns)
+result = data_patterns.load_overzicht('../','test_overzicht.xlsx')
+print(result['df'][0]['parameters']['nonzero'])
