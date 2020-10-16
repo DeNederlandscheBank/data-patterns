@@ -654,8 +654,8 @@ def get_possible_values(amount, possible_expressions, dataframe):
                 if len(items[i]) > 1: # only when we have a string
                     item = items[i][:-1]
                     for j in range(len(all_columns_v)): # check if each column can be used
-                        if re.search(item, all_columns_v[j][i]) is not None:
-                            if re.search(item, all_columns_v[j][i])[0] != all_columns_v[j][i]:
+                        if re.search(item, str(all_columns_v[j][i])) is not None:
+                            if re.search(item, str(all_columns_v[j][i]))[0] != str(all_columns_v[j][i]):
                                 del_rows.append(j)
                         else:
                                 del_rows.append(j)
