@@ -1413,7 +1413,7 @@ def derive_results(dataframe = None,
     if (dataframe is not None) and (df_patterns is not None):
 
 
-        df = dataframe.copy()
+        df_tot = dataframe.copy()
         results = list()
 
         for idx in tqdm(iterable=df_patterns.index, total=df_patterns.shape[0], disable = disable, position=0, leave=True):
@@ -1421,12 +1421,15 @@ def derive_results(dataframe = None,
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             # print(idx)
             encode = df_patterns.loc[idx, ENCODINGS]
-
+            cluster = df_patterns.loc[idx, CLUSTER]
+            if df_patterns.loc[idx, CLUSTER] != 0:
+                df = df_tot[df_tot[metapatterns[0]['cluster']]==df_patterns.loc[idx, CLUSTER]]
+            else:
+                df = df_tot
 
             try:
                 results_ex = eval(pandas_ex, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum,'ABS': np.abs}).index.values.tolist()
                 results_co = eval(pandas_co, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index.values.tolist()
-
 
                 # Get the correct P and Q values that were given for each row
                 colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
