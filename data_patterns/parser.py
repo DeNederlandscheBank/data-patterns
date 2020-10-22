@@ -223,8 +223,17 @@ def expression2pandas(g, nonzero_col, parameters):
             co_str = 'df[(('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")) | (~("+add_brackets(item.group(1)) +")& ~("+add_brackets(item.group(2))+ "))]"
             ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+") | (~("+add_brackets(item.group(1)) +")& ("+add_brackets(item.group(2))+ "))]"
         else:
-            co_str = 'df[('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")]"
-            ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
+            decimal = parameters.get("decimal", 8)
+            if decimal != 0:
+                decimal = -decimal
+            item_cond = re.search(r'(.*)(==)(.*)', item.group(2))
+
+            if item_cond is None or (re.search(r'"(.*)"', item_cond.group(3)) is not None and 'df[' not in item_cond.group(3)): # take out strings except when string is from sum
+                co_str = 'df[('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")]"
+                ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
+            else:
+                co_str = 'df[('+add_brackets(item.group(1))+') & ('+'abs('+ item_cond.group(1).strip() + '-(' + item_cond.group(3).strip() + '))<1.5e' + str(decimal)+")]"
+                ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+'abs('+ item_cond.group(1).strip() + '-(' + item_cond.group(3).strip() + '))<1.5e' + str(decimal)+")]"
     else:
         item = re.search(r'(.*)(==)(.*)', g)
         if item is None or (re.search(r"'(.*)'", item.group(3)) is not None and 'df[' not in item.group(3)): # take out strings except when string is from sum

@@ -19,6 +19,7 @@ from .transform import *
 from .encodings import *
 from .parser import *
 import logging
+import ast
 logging.basicConfig(filename='logger.log',format='%(levelname)s:%(message)s',level=logging.DEBUG)
 #import optimized
 
@@ -1412,7 +1413,7 @@ def derive_results(dataframe = None,
     if (dataframe is not None) and (df_patterns is not None):
 
 
-        df = dataframe.copy()
+        df_tot = dataframe.copy()
         results = list()
 
         for idx in tqdm(iterable=df_patterns.index, total=df_patterns.shape[0], disable = disable, position=0, leave=True):
@@ -1420,12 +1421,15 @@ def derive_results(dataframe = None,
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             # print(idx)
             encode = df_patterns.loc[idx, ENCODINGS]
-
+            cluster = df_patterns.loc[idx, CLUSTER]
+            if df_patterns.loc[idx, CLUSTER] != 0:
+                df = df_tot[df_tot[metapatterns[0]['cluster']]==df_patterns.loc[idx, CLUSTER]]
+            else:
+                df = df_tot
 
             try:
                 results_ex = eval(pandas_ex, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum,'ABS': np.abs}).index.values.tolist()
                 results_co = eval(pandas_co, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index.values.tolist()
-
 
                 # Get the correct P and Q values that were given for each row
                 colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
@@ -1622,3 +1626,18 @@ def find_redundant_patterns(df_patterns = None):
                             if (df_patterns.loc[row, 'confidence'] <= df_patterns.loc[row2, 'confidence']) and (df_patterns.loc[row, 'support'] <= df_patterns.loc[row2, 'support']):
                                 df_patterns.loc[row, 'pattern status'] = "redundant with pattern " + str(row2)
     return df_patterns
+
+def string_to_dict(dict_string):
+    # Convert to proper json format
+    dict_string = dict_string.replace("'", '"').replace('u"', '"')
+    return ast.literal_eval(dict_string)
+
+def load_overzicht(path, name, tab=0, metapattern='metapattern', template='template'):
+    result = {}
+    df = pd.read_excel(path+name, sheet_name=tab)
+    datas = df[template].unique()
+    for data in datas:
+        temp = df[df[template]==data]
+        result[data] = temp[metapattern].apply(string_to_dict).values
+
+    return result
