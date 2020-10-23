@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 
+
 import re
 import operator
+
 
 def logical_equivalence(*c):
     nonzero_c1 = (c[0] != 0)
     nonzero_c2 = (c[1] != 0)
     return ((nonzero_c1 & nonzero_c2) | (~nonzero_c1 & ~nonzero_c2))
 
+
 # implication
 def logical_implication(*c):
     nonzero_c1 = (c[0] != 0)
     nonzero_c2 = (c[1] != 0)
     return ~(nonzero_c1 & ~nonzero_c2)
+
 
 operators = {'>' : operator.gt,
              '<' : operator.lt,
@@ -22,6 +26,7 @@ operators = {'>' : operator.gt,
              '!=': operator.ne,
              '<->': logical_equivalence,
              '-->': logical_implication}
+
 
 preprocess = {'>':   operator.and_,
               '<':   operator.and_,
@@ -34,11 +39,13 @@ preprocess = {'>':   operator.and_,
               '<->': operator.or_,
               '-->': operator.or_}
 
+
 logicals = {
         '&': operator.and_,
         '|': operator.or_,
         '^':operator.xor
 }
+
 
 def generate_single_expression(P_columns, Q_columns, pattern, neg = []):
     if pattern == 'percentile':
@@ -55,6 +62,7 @@ def generate_single_expression(P_columns, Q_columns, pattern, neg = []):
             else:
                 expression += ' + {"' + P_columns[idx+1]+ '"}'
 
+
         if neg[-1]==-1:
             expression += ' = -{"' + Q_columns[0] + '"})'
         else:
@@ -68,8 +76,10 @@ def generate_single_expression(P_columns, Q_columns, pattern, neg = []):
         expression += " & " + '({"' + P_columns[idx+1]+ '"} ' + pattern + ' {"'+ Q_columns[idx+1] + '"})'
     return expression
 
+
 def generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, parameters):
     '''this function generates the conditional expression from P/Q_columns and P/Q_values'''
+
 
     P_operators = parameters.get("P_operators", ['='] * len(P_columns))
     # operators between Q_column and Q_value, default is =
@@ -79,8 +89,10 @@ def generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, pa
     # logical operators between Q expressions, default is &
     Q_logics = parameters.get("Q_logics", ['&'] * (len(Q_columns) - 1))
 
+
     # Boolean that is set to True if we want to also look for patterns the other way around
     both_ways = parameters.get("both_ways", False)
+
 
     pattern = "IF "
     if isinstance(P_values[0], str):
@@ -102,6 +114,7 @@ def generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, pa
             pattern += ' ' + Q_logics[idx] + ' ({"' + str(Q_columns[idx+1]) + '"} ' + Q_operators[idx+1] + ' "' + Q_values[idx+1]+ '")'
         else: # numerical value
             pattern += ' ' + Q_logics[idx] + ' ({"' + str(Q_columns[idx+1]) + '"} ' + Q_operators[idx+1] + ' ' + str(Q_values[idx+1]) + ')'
+
 
     if both_ways:
         pattern += " AND IF "
@@ -125,7 +138,9 @@ def generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, pa
             else: # numerical value
                 pattern += ' ' + Q_logics[idx] + ' ({"' + str(Q_columns[idx+1]) + '"} ' + Q_operators[idx+1] + ' ' + str(Q_values[idx+1]) + ')'
 
+
     return pattern
+
 
 def evaluate_excel_string(s):
     if s != '':
@@ -136,9 +151,11 @@ def evaluate_excel_string(s):
     else:
         return s
 
+
 def to_xbrl_expressions(pattern, encode, parameters):
     """Placeholder for XBRL"""
     return ["", ""]
+
 
 def replace_and_or(s):
     """Replace and by & and or by |, but not within strings"""
@@ -151,6 +168,7 @@ def replace_and_or(s):
         s = s.replace(item[2], replace_and_or(item[2]))
     return s
 
+
 def replace_div_by_zero(s):
     """Replace division by adding a smal value to numerator"""
     item = re.search(r"({.*?})(/)({.*?})", s)
@@ -160,6 +178,7 @@ def replace_div_by_zero(s):
     return s
 def preprocess_pattern(pattern, parameters):
     solvency = parameters.get("solvency", False)
+
 
     pattern = pattern.replace("=" , "==")
     pattern = pattern.replace(">==" , ">=")
@@ -173,6 +192,7 @@ def preprocess_pattern(pattern, parameters):
         pattern = replace_and_or(pattern)
         pattern = replace_div_by_zero(pattern)
     return pattern
+
 
 def datapoints2pandas(s, encode):
     """Transform datapoints to Pandas datapoints
@@ -190,9 +210,11 @@ def datapoints2pandas(s, encode):
         nonzero_col.append("df["+item+"]")
     return res, nonzero_col
 
+
 def add_brackets(s):
     """Add brackets around expressions with & and |
     """
+
 
     item = re.search(r'(.*)([&|\|])(\s*[(df|df].*)', s)
     if item is not None:
@@ -204,8 +226,11 @@ def add_brackets(s):
         else:
             return s.strip()
 
+
 def expression2pandas(g, nonzero_col, parameters):
     """Transform conditional expression to Pandas code"""
+
+    solvency = parameters.get("solvency", False)
 
     exclude_zero_columns = parameters.get("nonzero", False)
     both_ways = parameters.get("both_ways", False)
@@ -214,6 +239,7 @@ def expression2pandas(g, nonzero_col, parameters):
         both_ways = True
     if decimal != 0:
         decimal = -decimal
+
 
     item = re.search(r'IF(.*)THEN(.*)', g)
     if item is not None:
@@ -228,7 +254,10 @@ def expression2pandas(g, nonzero_col, parameters):
                 decimal = -decimal
             item_cond = re.search(r'(.*)(==)(.*)', item.group(2))
 
-            if item_cond is None or (re.search(r'"(.*)"', item_cond.group(3)) is not None and 'df[' not in item_cond.group(3)): # take out strings except when string is from sum
+
+
+            # only when multiple columns after THEN
+            if item_cond is None or 'df[' not in item_cond.group(3): # take out strings except when string is from sum
                 co_str = 'df[('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")]"
                 ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
             else:
@@ -237,6 +266,7 @@ def expression2pandas(g, nonzero_col, parameters):
     else:
         item = re.search(r'(.*)(==)(.*)', g)
         if item is None or (re.search(r"'(.*)'", item.group(3)) is not None and 'df[' not in item.group(3)): # take out strings except when string is from sum
+
 
             co_str = 'df[('+add_brackets(g)+')&'
             ex_str = 'df[~('+add_brackets(g)+')&'
