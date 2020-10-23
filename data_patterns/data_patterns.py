@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
 
+
+
 """Main module."""
+
+
 
 
 # imports
@@ -24,11 +28,16 @@ logging.basicConfig(filename='logger.log',format='%(levelname)s:%(message)s',lev
 #import optimized
 
 
+
+
 __author__ = """De Nederlandsche Bank"""
 __email__ = 'ECDB_berichten@dnb.nl'
 __version__ = '0.1.13'
 
+
 class PatternMiner:
+
+
 
 
     '''
@@ -69,6 +78,8 @@ class PatternMiner:
     '''
 
 
+
+
     def __init__(self,*args, **kwargs):
         self.df_data = None
         self.df_patterns = None
@@ -79,22 +90,30 @@ class PatternMiner:
         self.__process_parameters(*args, **kwargs)
 
 
+
+
     def find(self, *args, **kwargs):
         '''General function to find patterns
         '''
         logger = logging.getLogger(__name__)
 
 
+
+
         self.__process_parameters(*args, **kwargs)
         assert self.metapatterns is not None, "No patterns defined."
         assert self.df_data is not None, "No dataframe defined."
 
+
         logger.info('Rows in data: ' + str(self.df_data.shape[0]))
+
 
         if 'cluster' in self.metapatterns[0].keys(): # need it to save
             self.cluster = self.metapatterns[0]['cluster']
 
+
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
+
 
         self.metapatterns[0]['cluster'] = self.cluster # redo cluster
         if (not kwargs.get('append', False)) or (self.df_patterns is None):
@@ -103,7 +122,12 @@ class PatternMiner:
             if len(new_df_patterns.index) > 0:
                 self.df_patterns.append(new_df_patterns)
 
+
         return self.df_patterns
+
+
+
+
 
 
 
@@ -112,7 +136,11 @@ class PatternMiner:
         '''General function to change data to correct value. This only works for a very simple conditional pattern. '''
 
 
+
+
         self.__process_parameters(*args, **kwargs)
+
+
 
 
         assert self.df_patterns is not None, "No patterns defined."
@@ -122,8 +150,14 @@ class PatternMiner:
 
 
 
+
+
+
+
         df_data = self.df_data.copy()
         df_results = self.df_results.copy()
+
+
 
 
         # get Q value that is correct from the pattern
@@ -131,13 +165,21 @@ class PatternMiner:
         df_results = df_results.loc[df_results['result_type'] == False]
 
 
+
+
         # Get the Q column names
         colq = get_value(df_results['pattern_def'].iloc[0], 2, 1)
+
+
 
 
         # Replace the data with the correct values
         df_data.loc[df_data.index.isin(df_results.index), colq] = df_results['correct_value']
         return df_data, df_results
+
+
+
+
 
 
 
@@ -148,17 +190,27 @@ class PatternMiner:
         self.__process_parameters(*args, **kwargs)
 
 
+
+
         assert self.df_patterns is not None, "No patterns defined."
         assert self.df_data is not None, "No data defined."
+
+
 
 
         self.df_patterns = update_statistics(dataframe = self.df_data, df_patterns = self.df_patterns,metapatterns = self.metapatterns)
 
 
+
+
         self.df_results = derive_results(**kwargs, df_patterns = self.df_patterns, dataframe = self.df_data, metapatterns = self.metapatterns)
 
 
+
+
         return self.df_results
+
+
 
 
     def update_statistics(self, *args, **kwargs):
@@ -167,14 +219,22 @@ class PatternMiner:
         self.__process_parameters(*args, **kwargs)
 
 
+
+
         assert self.df_patterns is not None, "No patterns defined."
         assert self.df_data is not None, "No data defined."
+
+
 
 
         self.df_patterns = update_statistics(dataframe = self.df_data, df_patterns = self.df_patterns)
 
 
+
+
         return self.df_patterns
+
+
 
 
     def convert_labels(self, df1, df2):
@@ -183,18 +243,26 @@ class PatternMiner:
         return to_dataframe(patterns = convert_columns(self.df_patterns, df1, df2))
 
 
+
+
     def convert_columns_to_time(self, name_col, year, extra=[], tqd = False):
+
+
+
 
 
 
         df = self.df_data.copy()
 
+
         # # change data to get seperate same names per year
         # df[name_col]=df[name_col]+' (' + df.groupby([year,name_col]).cumcount().add(1).astype(str) + ')'
+
 
         # get names
         names = df[name_col].unique()
         items = []
+
 
         count = 0
         # loop over names to start transform, use tqdm if one wants
@@ -215,6 +283,7 @@ class PatternMiner:
             for i in range(len(extra)):
                 temp_df[extra[i]] = items[i]
 
+
             temp_df = temp_df.reset_index()
             temp_df.set_index([name_col,'Datapoint'], inplace = True) # set index
             # add data to previous block
@@ -227,18 +296,22 @@ class PatternMiner:
                     print('An ERROR has occured')
                     return temp_df
 
-        self.df_data = new_df.fillna(0)
+
+        self.df_data = new_df
         self.df_data.columns = self.df_data.columns.astype(str)
         return new_df
 
+
     def convert_to_time(self, to_index, year, to_del=[]):
                 df_solos_01 = self.df_data.copy()
+
 
                 # delete
                 for i in to_del:
                     del df_solos_01[i]
                 df_solos_01[year] = df_solos_01[year].apply (lambda x : x.year)
                 years = list(df_solos_01[year].unique())
+
 
                 for i in range(len(years)-1):
                     df1 = df_solos_01[df_solos_01[year] == years[i]]
@@ -252,9 +325,11 @@ class PatternMiner:
                         df = df.append(df_new)
                 del df[year+' (t-1)']
                 del df[year+' (t)']
-                self.df_data = df.fillna(0)
+                self.df_data = df
                 self.df_data.columns = self.df_data.columns.astype(str)
                 return df
+
+
 
 
     def __process_parameters(self, *args, **kwargs):
@@ -267,6 +342,8 @@ class PatternMiner:
         self.clean_quotation = self.__process_key('clean_quotation', bool, self.clean_quotation, *args, **kwargs)
 
 
+
+
         if isinstance(self.metapatterns, dict):
             self.metapatterns = [self.metapatterns]
         if self.clean_quotation:
@@ -275,7 +352,10 @@ class PatternMiner:
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('\'', ""))
             self.clean_quotation = False
 
+
         return None
+
+
 
 
     def __process_key(self, key, key_type, current, *args, **kwargs):
@@ -290,19 +370,29 @@ class PatternMiner:
         return current
 
 
+
+
 def get_value(pattern, num = 1, col=3):
     ''' Derive the P (num=1) or Q (num=2) value (col=3) or column name (col=1) from a pattern'''
+
+
 
 
     values = []
 
 
+
+
     item = re.search(r'IF(.*)THEN(.*)', pattern)
+
+
 
 
     # If not conditional statement
     if item == None:
         item2 = re.search(r'(.*)[><=](.*)', pattern)
+
+
 
 
         if pattern.count('}') > 2: # sum pattern
@@ -311,10 +401,14 @@ def get_value(pattern, num = 1, col=3):
                 values.append(item3.group(1))
 
 
+
+
         else:
             if '{' in item2.group(2): # compare column pattern
                 item3 = re.search(r'{(.*?)}', item2.group(num)) # get columns
                 values.append(item3.group(1)[1:-1])
+
+
 
 
             else: # compare value pattern
@@ -335,6 +429,8 @@ def get_value(pattern, num = 1, col=3):
                 item3 = re.search(r'"(.*)"', item2.group(col))
 
 
+
+
                 if item3 is not None: # If string
                     values.append(item3.group(1))
                 else: # If float
@@ -343,8 +439,14 @@ def get_value(pattern, num = 1, col=3):
 
 
 
+
+
+
+
             item2 = re.search(r'(.*)([>|<|!=|<=|>=|=])(.*)', item.group(num))
             item3 = re.search(r'"(.*)"', item2.group(col))
+
+
 
 
             if item3 is not None: # If string
@@ -353,10 +455,14 @@ def get_value(pattern, num = 1, col=3):
                 values.append(float(item2.group(col).replace(')', '')))
 
 
+
+
     if len(values) == 1:
         return values[0]
     else: # return list if multiple columns/values
         return values
+
+
 
 
 def derive_patterns(dataframe   = None,
@@ -370,8 +476,12 @@ def derive_patterns(dataframe   = None,
     logger.info('Find started ...')
 
 
+
+
     df_patterns = pd.DataFrame(columns = PATTERNS_COLUMNS)
     dataframe = dataframe.reset_index()
+
+
 
 
     for metapattern in metapatterns:
@@ -395,6 +505,8 @@ def derive_patterns(dataframe   = None,
                         logger.info('Reduction of rows in patterns to: ' + str(patterns.shape[0]))
 
 
+
+
                 df_patterns = df_patterns.append(patterns, ignore_index = True)
         else:
             if "expression" in metapattern.keys():
@@ -410,7 +522,10 @@ def derive_patterns(dataframe   = None,
                     logger.info('Reduction of rows in patterns to: ' + str(patterns.shape[0]))
 
 
+
+
             df_patterns = df_patterns.append(patterns, ignore_index = True)
+
 
     if cluster == 0 :
         df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
@@ -419,10 +534,16 @@ def derive_patterns(dataframe   = None,
     df_patterns.index.name = 'index'
 
 
+
+
     logger.info('Find ended ...')
 
 
+
+
     return PatternDataFrame(df_patterns)
+
+
 
 
 def get_highest_conf(df_patterns):
@@ -432,18 +553,28 @@ def get_highest_conf(df_patterns):
     """
 
 
+
+
     df_patterns['P_val'] = df_patterns['pattern_def'].apply(lambda x: get_value(x, num=1))
+
+
 
 
     df_patterns = df_patterns.sort_values('support', ascending=False) # Sort values
 
 
+
+
     _, idx = np.unique(df_patterns['P_val'].astype(str).values, return_index=True) # Drop duplicate rows
+
+
 
 
     df_patterns = df_patterns.iloc[idx].sort_index() # Only get dataframe rows from these indices
     df_patterns = df_patterns.drop(['P_val'],1)
     return df_patterns
+
+
 
 
 def derive_patterns_from_template_expression(metapattern = None,
@@ -457,12 +588,18 @@ def derive_patterns_from_template_expression(metapattern = None,
     expres = parameters.get("expres", False)
 
 
+
+
     if re.search(r'IF(.*)THEN(.*)', expression) or expres: # conditional statement
         new_list = derive_patterns_from_expression(expression, metapattern, dataframe)
     else:
         new_list = derive_quantitative_pattern_expression(expression, metapattern, dataframe)
     df_patterns = to_dataframe(patterns = new_list, parameters = parameters, encodings=encodings)
     return df_patterns
+
+
+
+
 
 
 
@@ -475,7 +612,11 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
     logger = logging.getLogger(__name__)
 
 
+
+
     logger.info('Calling function derive_quantitative_pattern_expression')
+
+
 
 
     parameters = metapattern.get("parameters", {})
@@ -483,7 +624,11 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
     cluster = metapattern.get('cluster', 0)
 
 
+
+
     confidence, support = get_parameters(parameters)
+
+
 
 
     # only use numerical columns for quantitative expressions
@@ -492,7 +637,11 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
     dataframe = dataframe[numerical_columns]
 
 
+
+
     patterns = list()
+
+
 
 
     if '+' in expression: # Sum pattern
@@ -510,11 +659,15 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
             Q_columns = list(set(Q_columns))
 
 
+
+
         # Right format
         Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
         P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
         Q_columns.sort()
         P_columns.sort()
+
+
 
 
         # Use numpy now
@@ -531,9 +684,13 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
         item3 = item2.group(3)
 
 
+
+
         if item3[0] == '=': # Stupid bug that does not capture >= or <=, so fixed it like this
             pattern += '='
             item3 = item3[1:]
+
+
 
 
         if '{' in item3: # column comparing pattern
@@ -553,6 +710,8 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
                 patterns.extend(pat)
 
 
+
+
         else: # column value
             columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
             value = float(item3)
@@ -569,10 +728,14 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
     return patterns
 
 
+
+
 def get_possible_columns(amount, expression, dataframe, quant=False):
     """
     Get the possible columns for the conitional expression using regex
     """
+
+
 
 
     # no regex columns, then jut return it
@@ -583,7 +746,11 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
             return [expression]
 
 
+
+
     all_columns = []
+
+
 
 
     for datapoint in re.findall(r'{.*?}', expression): # See which columns we are looking for per left open column
@@ -599,8 +766,11 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
         all_columns.append(columns)
         expression = expression.replace(datapoint, '{.*}', 1) # Replace it so that it goes well later
 
+
     if quant: # for quantitative expressions
         return all_columns[0]
+
+
 
 
     if amount > 1: # Combine the lists into combinations where we do not have duplicates
@@ -612,8 +782,14 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
 
 
 
+
+
+
+
     elif amount == 1: # If we have one empty spot, then just use the possible values
         possibilities = [[i] for i in all_columns[0]]
+
+
 
 
     possible_expressions = [] # list of all possible expressions
@@ -625,13 +801,19 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
     return possible_expressions
 
 
+
+
 def get_possible_values(amount, possible_expressions, dataframe):
+
+
 
 
     """
     Get the possible values for the conitional expression
 
     """
+
+
 
 
     if amount < 1: # no values to be found
@@ -646,7 +828,11 @@ def get_possible_values(amount, possible_expressions, dataframe):
                 all_columns.append(value_col)
 
 
+
+
             all_columns_v = dataframe[all_columns].drop_duplicates().values
+
+
 
 
             items =  re.findall(r'\[(.*?@)\]', possible_expression) # Find the columns
@@ -662,10 +848,16 @@ def get_possible_values(amount, possible_expressions, dataframe):
                                 del_rows.append(j)
 
 
+
+
                     possible_expression = possible_expression.replace(item, '', 1) # Replace it so that it goes well later
 
 
+
+
             all_columns_v = np.delete(all_columns_v, del_rows,0) # del rows
+
+
 
 
             # Replace @ with the possibilities
@@ -678,6 +870,8 @@ def get_possible_values(amount, possible_expressions, dataframe):
                         possible_expression_v = possible_expression_v.replace('[@]', str(column_v), 1) # replace with str
                 expressions.append(possible_expression_v)
         return expressions
+
+
 
 
 def add_qoutation(possible_expressions):
@@ -698,6 +892,10 @@ def add_qoutation(possible_expressions):
 
 
 
+
+
+
+
 def derive_patterns_from_expression(expression = "",
                                     metapattern = None,
                                     dataframe = None):
@@ -707,13 +905,18 @@ def derive_patterns_from_expression(expression = "",
     logger = logging.getLogger(__name__)
 
 
+
+
     logger.info('Calling function derive_patterns_from_expression')
+
+
 
 
     parameters = metapattern.get("parameters", {})
     solvency = parameters.get("solvency", False)
     disable = parameters.get("disable", False)
     cluster = metapattern.get("cluster", 0)
+
 
     name = metapattern.get('name', "No name")
     encode = metapattern.get(ENCODE, {})
@@ -723,11 +926,19 @@ def derive_patterns_from_expression(expression = "",
         confidence = 0
 
 
+
+
     patterns = list()
+
+
 
 
     amount = expression.count('.*}') #Amount of columns to be found
     amount_v = expression.count("@") #Amount of column values to be found
+
+
+
+
 
 
 
@@ -742,6 +953,8 @@ def derive_patterns_from_expression(expression = "",
         dataframe2 = df_features
 
 
+
+
     else:
         dataframe2 = dataframe
     # Check for the possible columns and values
@@ -753,6 +966,7 @@ def derive_patterns_from_expression(expression = "",
         logger.warning(' Amount of possibilities is high! Namely, ' + str(len(possible_expressions)))
     else:
         logger.info(' Amount of possibilities: ' + str(len(possible_expressions)))
+
 
     for possible_expression in tqdm(iterable = possible_expressions, total=len(possible_expressions), disable = disable, position = 0, leave=True):
         pandas_expressions = to_pandas_expressions(possible_expression, encode, parameters, dataframe)
@@ -777,7 +991,10 @@ def derive_patterns_from_expression(expression = "",
             else:
                 continue
 
+
     return patterns
+
+
 
 
 def derive_patterns_from_code(metapattern = None,
@@ -786,6 +1003,10 @@ def derive_patterns_from_code(metapattern = None,
        Splits the patterns into conditional and quantitative
     '''
     patterns = list()
+
+
+
+
 
 
 
@@ -801,6 +1022,10 @@ def derive_patterns_from_code(metapattern = None,
     values = metapattern.get("values", None)
     encodings = metapattern.get("encode", {})
     parameters = metapattern.get("parameters", {})
+
+
+
+
 
 
 
@@ -825,9 +1050,17 @@ def derive_patterns_from_code(metapattern = None,
 
 
 
+
+
+
+
         patterns = possible_expressions
     df_patterns = to_dataframe(patterns = patterns, parameters = parameters, encodings= encodings)
     return df_patterns
+
+
+
+
 
 
 
@@ -840,10 +1073,16 @@ def derive_conditional_pattern(dataframe = None,
     '''
 
 
+
+
     logger = logging.getLogger(__name__)
 
 
+
+
     logger.info(' Calling function derive_conditional_pattern')
+
+
 
 
     # get items from metapattern definition
@@ -856,13 +1095,19 @@ def derive_conditional_pattern(dataframe = None,
     Q_values = metapattern.get("Q_values", ['[@]']*len(Q_columns))
 
 
+
+
     confidence, support = get_parameters(parameters)
+
+
 
 
     # derive df_feature list from P and Q (we use a copy, so we can change values for encodings)
     df_features = dataframe[P_columns + Q_columns].copy()
     # execute dynamic encoding functions
     encodings = get_encodings()
+
+
 
 
     # When we encode we have to cut down on possibilities
@@ -874,8 +1119,14 @@ def derive_conditional_pattern(dataframe = None,
 
 
 
+
+
+
+
         expressions = []
         df_features = df_features.drop_duplicates(P_columns + Q_columns)
+
+
 
 
         # search for all possible values of P and Q, cut down possibilities
@@ -886,16 +1137,26 @@ def derive_conditional_pattern(dataframe = None,
             expression = expression.replace('"[@]"', '[@]')
 
 
+
+
             expressions.append(expression)
 
 
+
+
         return expressions
+
+
 
 
     # in the case of no encoding, we leave it as it is
     expression = generate_conditional_expression(P_columns, P_values, Q_columns, Q_values, parameters)
     expression = expression.replace('"[@]"', '[@]')
     return [expression]
+
+
+
+
 
 
 
@@ -909,6 +1170,8 @@ def get_parameters(parameters):
     return confidence, support
 
 
+
+
 def derive_quantitative_pattern(metapattern = None,
                                 dataframe = None,
                                 pattern = None,
@@ -920,15 +1183,23 @@ def derive_quantitative_pattern(metapattern = None,
                                 parameters = {}):
 
 
+
+
     """
     Derives quantitative pattern by splitting it into the right category
     """
 
 
+
+
     logger = logging.getLogger(__name__)
 
 
+
+
     logger.info(' Calling function derive_quantitative_pattern')
+
+
 
 
     confidence, support = get_parameters(parameters)
@@ -936,6 +1207,8 @@ def derive_quantitative_pattern(metapattern = None,
     P_dataframe = metapattern.get("P_dataframe", None)
     Q_dataframe = metapattern.get("Q_dataframe", None)
     cluster = metapattern.get("cluster", 0)
+
+
 
 
     if (P_dataframe is not None) and (Q_dataframe is not None):
@@ -950,10 +1223,16 @@ def derive_quantitative_pattern(metapattern = None,
 
 
 
+
+
+
+
     # select all columns with numerical values
     numerical_columns = [dataframe.columns[c] for c in range(len(dataframe.columns))
                             if ((dataframe.dtypes[c] == 'float64') or (dataframe.dtypes[c] == 'int64'))]
     dataframe = dataframe[numerical_columns]
+
+
 
 
     if P_columns is not None:
@@ -962,10 +1241,14 @@ def derive_quantitative_pattern(metapattern = None,
         P_columns = range(len(dataframe.columns))
 
 
+
+
     if Q_columns is not None:
         Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
     else:
         Q_columns = range(len(dataframe.columns))
+
+
 
 
     if columns is not None:
@@ -974,8 +1257,11 @@ def derive_quantitative_pattern(metapattern = None,
         columns = range(len(dataframe.columns))
 
 
+
+
     data_array = dataframe.values.T
     patterns = list()
+
 
     if value is not None: # If value is given, compare columns to value
         values = patterns_column_value(dataframe  = dataframe,
@@ -988,6 +1274,8 @@ def derive_quantitative_pattern(metapattern = None,
             patterns.extend(val)
 
 
+
+
     elif pattern == 'percentile': # If percentile, find that
         values = patterns_percentile(dataframe  = dataframe,
                                 pattern = pattern,
@@ -996,6 +1284,8 @@ def derive_quantitative_pattern(metapattern = None,
                                  parameters = parameters,cluster= cluster)
         for val in values:
             patterns.extend(val)
+
+
 
 
     elif pattern == 'sum': # If sum, then find a sum pattern
@@ -1008,9 +1298,13 @@ def derive_quantitative_pattern(metapattern = None,
             patterns.extend(pat)
 
 
+
+
     elif pattern == 'ratio':
         # TO DO
         return
+
+
 
 
     else: # Compare columns with eachother
@@ -1026,7 +1320,13 @@ def derive_quantitative_pattern(metapattern = None,
 
 
 
+
+
+
+
     return patterns
+
+
 
 
 operators = {'>' : operator.gt,
@@ -1039,6 +1339,8 @@ operators = {'>' : operator.gt,
          '-->': logical_implication}
 
 
+
+
 def derive_pattern_statistics(co):
     # co_sum is the support of the pattern
     co_sum = co.sum()
@@ -1049,6 +1351,8 @@ def derive_pattern_statistics(co):
     # oddsratio is a correlation measure
     #oddsratio = (1 + co_sum) / (1 + ex_sum)
     return co_sum, ex_sum, conf #, oddsratio
+
+
 
 
 def patterns_column_value(dataframe  = None,
@@ -1074,6 +1378,8 @@ def patterns_column_value(dataframe  = None,
             yield pattern_data
 
 
+
+
 def patterns_percentile(dataframe  = None,
                            pattern    = None,
                            pattern_name = "percentile",
@@ -1085,6 +1391,8 @@ def patterns_percentile(dataframe  = None,
     data_array = dataframe.values.T
 
 
+
+
     percentile = parameters['percentile']
     add_per = (100-percentile)/2
     for c in columns:
@@ -1093,15 +1401,23 @@ def patterns_percentile(dataframe  = None,
         lower = round(np.percentile(data_array[c, :], add_per),2)
 
 
+
+
         co_up = reduce(operators['<='], [data_array[c, :], upper])
         co_down = reduce(operators['>='], [data_array[c, :], lower])
+
+
 
 
         # Calculate which falls in the boundaries (list of bool)
         co = np.logical_and.reduce([co_up, co_down])
 
 
+
+
         co_sum, ex_sum, conf = derive_pattern_statistics(co)
+
+
 
 
         if (conf >= confidence) and (co_sum >= support):
@@ -1111,6 +1427,10 @@ def patterns_percentile(dataframe  = None,
             xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
             pattern_data = [[[pattern_name, cluster], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
             yield pattern_data
+
+
+
+
 
 
 
@@ -1126,10 +1446,14 @@ def patterns_column_column(dataframe  = None,
     logger = logging.getLogger(__name__)
 
 
+
+
     confidence, support = get_parameters(parameters)
     decimal = parameters.get("decimal", 0)
     window = parameters.get("window", None)
     disable = parameters.get("disable", False)
+
+
 
 
     parameters['nonzero'] = True
@@ -1139,7 +1463,10 @@ def patterns_column_column(dataframe  = None,
     count = 0
 
 
+
+
     preprocess_operator = preprocess[pattern]
+
 
     if pattern == "=":
         duplicates = {} # no duplicates
@@ -1157,6 +1484,7 @@ def patterns_column_column(dataframe  = None,
                 if data_filter.any():
                     data_array = initial_data_array[:, data_filter]
                     if data_array.any():
+
 
                     # keep track of duplicates and Calculate using decimal
                         if pattern == "=":
@@ -1186,6 +1514,10 @@ def patterns_column_column(dataframe  = None,
 
 
 
+
+
+
+
 def patterns_sums_column( dataframe  = None,
                          pattern_name = None,
                          P_columns  = None,
@@ -1197,10 +1529,14 @@ def patterns_sums_column( dataframe  = None,
     logger = logging.getLogger(__name__)
 
 
+
+
     confidence, support = get_parameters(parameters)
     sum_elements = parameters.get("sum_elements", 2)
     decimal = parameters.get("decimal", 0)
     disable = parameters.get("disable", False)
+
+
 
 
     initial_data_array = dataframe.values.T
@@ -1208,6 +1544,10 @@ def patterns_sums_column( dataframe  = None,
     # set up boolean masks for nonzero items per column
     nonzero = (dataframe.values != 0).T
     n = len(dataframe.columns)
+
+
+
+
 
 
 
@@ -1226,6 +1566,8 @@ def patterns_sums_column( dataframe  = None,
             lhs_column_list = [col for col in P_columns if (col != rhs_column)]
 
 
+
+
             # make combinations
             for lhs_columns in itertools.combinations(lhs_column_list, lhs_elements):
                 count += 1
@@ -1233,7 +1575,11 @@ def patterns_sums_column( dataframe  = None,
                     logger.warning(' More than 50 possibilities!')
 
 
+
+
                 all_columns = lhs_columns + (rhs_column,)
+
+
 
 
                 # reduce to get boolean list with all columns
@@ -1249,6 +1595,10 @@ def patterns_sums_column( dataframe  = None,
                         xbrl_expressions = to_xbrl_expressions(possible_expression, {}, parameters)
                         pattern_data = [[[pattern_name, cluster], possible_expression, [co_sum, ex_sum, conf]] + pandas_expressions + xbrl_expressions + ['']]
                         yield pattern_data
+
+
+
+
 
 
 
@@ -1295,9 +1645,15 @@ def derive_ratio_pattern(dataframe  = None,
 
 
 
+
+
+
+
 def to_pandas_expressions(pattern, encode, parameters, dataframe):
     """Derive pandas code from the pattern definition string both confirmation and exceptions"""
     logger = logging.getLogger(__name__)
+
+
 
 
     logger.debug(' Pattern in: ' + pattern)
@@ -1309,7 +1665,10 @@ def to_pandas_expressions(pattern, encode, parameters, dataframe):
     co_str, ex_str = expression2pandas(res, nonzero_col, parameters)
     logger.debug(' Pandas out: ' + co_str)
 
+
     return [co_str, ex_str]
+
+
 
 
 def to_dataframe(patterns = None, parameters = {}, encodings={}):
@@ -1326,6 +1685,8 @@ def to_dataframe(patterns = None, parameters = {}, encodings={}):
         df = pd.DataFrame(columns = PATTERNS_COLUMNS)
         df.index.name = 'index'
     return df
+
+
 
 
 def update_statistics(dataframe = None,
@@ -1369,10 +1730,16 @@ def update_statistics(dataframe = None,
                 df_patterns.loc[idx, ERROR] = 'ERROR unknown'
 
 
+
+
             df_new_patterns = df_patterns
 
 
+
+
     return df_new_patterns
+
+
 
 
 def get_encodings():
@@ -1382,6 +1749,8 @@ def get_encodings():
     for item in encodings_definitions.keys():
         encodings[item]= locals()[item]
     return encodings
+
+
 
 
 def derive_results(dataframe = None,
@@ -1394,8 +1763,12 @@ def derive_results(dataframe = None,
     logger = logging.getLogger(__name__)
 
 
+
+
     logger.info('Analyze started ...')
     logger.info('Shape of df_patterns: ' + str(df_patterns.shape))
+
+
 
 
     if (P_dataframe is not None) and (Q_dataframe is not None):
@@ -1410,11 +1783,15 @@ def derive_results(dataframe = None,
     parameters = metapatterns[0].get('parameters', {})
     disable = parameters.get('disable', False)
 
+
     if (dataframe is not None) and (df_patterns is not None):
+
+
 
 
         df_tot = dataframe.copy()
         results = list()
+
 
         for idx in tqdm(iterable=df_patterns.index, total=df_patterns.shape[0], disable = disable, position=0, leave=True):
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
@@ -1427,13 +1804,17 @@ def derive_results(dataframe = None,
             else:
                 df = df_tot
 
+
             try:
                 results_ex = eval(pandas_ex, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum,'ABS': np.abs}).index.values.tolist()
                 results_co = eval(pandas_co, encodings, {'df': df, 'MAX': np.maximum, 'MIN': np.minimum, 'SUM': np.sum, 'ABS': np.abs}).index.values.tolist()
 
+
                 # Get the correct P and Q values that were given for each row
                 colq = get_value(df_patterns.loc[idx, "pattern_def"], 2, 1)
                 colp = get_value(df_patterns.loc[idx, "pattern_def"], 1, 1)
+
+
 
 
                 # Get it in the richt format, list if necessary
@@ -1441,6 +1822,8 @@ def derive_results(dataframe = None,
                     df['combined_q']= df[colq].values.tolist()
                     colq_old = colq
                     colq = 'combined_q'
+
+
 
 
                 if isinstance(colp, list):
@@ -1452,9 +1835,13 @@ def derive_results(dataframe = None,
                     colq = df.columns.get_loc(colq)
 
 
+
+
                 #
                 for i in results_ex:
                     k = df.index.get_loc(i)
+
+
 
 
                     if colp != None:
@@ -1469,6 +1856,8 @@ def derive_results(dataframe = None,
                     if colq != None:
 
 
+
+
                         values_q = df.iloc[k, colq]
                         if isinstance(values_q, pd.Series): # If we have a pandas series we might have duplicate indices
                             if len(values_q) > 1:
@@ -1477,6 +1866,10 @@ def derive_results(dataframe = None,
                                 values_q = values_q[0]
                     else:
                         values_q = ""
+
+
+
+
 
 
 
@@ -1491,6 +1884,8 @@ def derive_results(dataframe = None,
                                     df_patterns.loc[idx, "pattern_def"],
                                     values_p,
                                     values_q])
+
+
 
 
                 for i in results_co:
@@ -1550,6 +1945,8 @@ def derive_results(dataframe = None,
                 logger.error('Error in analyze: UNKOWN')
 
 
+
+
         df_results = pd.DataFrame(data = results, columns = RESULTS_COLUMNS)
         df_results.sort_values(by = ["index", "confidence", "support"], ascending = [True, False, False], inplace = True)
         df_results.set_index(["index"], inplace = True)
@@ -1559,12 +1956,18 @@ def derive_results(dataframe = None,
             df_results.index = df_results.index
 
 
+
+
     for level in range(len(dataframe.index.names)):
         del dataframe[dataframe.index.names[level]]
     df_results = ResultDataFrame(df_results)
     logger.info('Shape of df_results: ' + str(df_results.shape))
     logger.info('Analyze ended ...')
     return df_results
+
+
+
+
 
 
 
@@ -1591,6 +1994,8 @@ def read_excel(filename = None,
     if dataframe is not None:
         df_patterns = update_statistics(dataframe = dataframe, df_patterns = df_patterns)
     return df_patterns
+
+
 
 
 def find_redundant_patterns(df_patterns = None):
@@ -1627,10 +2032,12 @@ def find_redundant_patterns(df_patterns = None):
                                 df_patterns.loc[row, 'pattern status'] = "redundant with pattern " + str(row2)
     return df_patterns
 
+
 def string_to_dict(dict_string):
     # Convert to proper json format
     dict_string = dict_string.replace("'", '"').replace('u"', '"')
     return ast.literal_eval(dict_string)
+
 
 def load_overzicht(path, name, tab=0, metapattern='metapattern', template='template'):
     result = {}
@@ -1639,5 +2046,6 @@ def load_overzicht(path, name, tab=0, metapattern='metapattern', template='templ
     for data in datas:
         temp = df[df[template]==data]
         result[data] = temp[metapattern].apply(string_to_dict).values
+
 
     return result
