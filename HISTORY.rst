@@ -85,3 +85,9 @@ You can now add a boolean to the miner. If you give the boolean True to the mine
     
     
     Changed the IF THEN expression so that we can use decimals when numeric
+    
+       
+    Parameters
+    
+1. 'notNaN' (boolean): Only takes not NaN columns
+
