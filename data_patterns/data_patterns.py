@@ -217,14 +217,15 @@ class PatternMiner:
         return new_df
 
 
-    def convert_to_time(self, to_index, year, to_del=[]):
+    def convert_to_time(self, to_index, year, to_del=[], set_year=True):
                 df_solos_01 = self.df_data.copy()
 
 
                 # delete
                 for i in to_del:
                     del df_solos_01[i]
-                df_solos_01[year] = df_solos_01[year].apply (lambda x : x.year)
+                if set_year:
+                    df_solos_01[year] = df_solos_01[year].apply (lambda x : x.year)
                 years = list(df_solos_01[year].unique())
 
 
