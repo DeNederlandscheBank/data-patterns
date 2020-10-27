@@ -91,3 +91,7 @@ You can now add a boolean to the miner. If you give the boolean True to the mine
     
 1. 'notNaN' (boolean): Only takes not NaN columns
 
+    Function changes
+    
+1. Convert_to_time: add boolean set_year. If true then only use the years (this is for yearly data), otherwise keep whole date. Set to True standard
+
