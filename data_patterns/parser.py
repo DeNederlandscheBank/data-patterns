@@ -233,6 +233,7 @@ def expression2pandas(g, nonzero_col, parameters):
     solvency = parameters.get("solvency", False)
 
     exclude_zero_columns = parameters.get("nonzero", False)
+    notNaN = parameters.get("notNaN", False)
     both_ways = parameters.get("both_ways", False)
     decimal = parameters.get("decimal", 0)
     if re.search('AND IF', g):
@@ -288,4 +289,15 @@ def expression2pandas(g, nonzero_col, parameters):
                     ex_str += '(' + i +'!=0)&'
             co_str = co_str[:-1] + ']'
             ex_str = ex_str[:-1] + ']'
+
+    if notNaN: # If we want to exclude nan values
+        co_str = co_str[:-1]
+        ex_str = ex_str[:-1]
+        all_columns = list(set(re.findall('\["(.*?)"\]', co_str)))
+        for column in all_columns:
+            co_str = co_str + '&(df["' + column +'"].notna())'
+            ex_str = ex_str + '&(df["' + column +'"].notna())'
+        co_str = co_str + ']'
+        ex_str = ex_str + ']'
+        print(co_str)
     return co_str, ex_str

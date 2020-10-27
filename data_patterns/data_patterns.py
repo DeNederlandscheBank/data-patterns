@@ -170,22 +170,15 @@ class PatternMiner:
         return to_dataframe(patterns = convert_columns(self.df_patterns, df1, df2))
 
 
-
-
     def convert_columns_to_time(self, name_col, year, extra=[], tqd = False):
 
         df = self.df_data.copy()
-
-
         # # change data to get seperate same names per year
         # df[name_col]=df[name_col]+' (' + df.groupby([year,name_col]).cumcount().add(1).astype(str) + ')'
-
 
         # get names
         names = df[name_col].unique()
         items = []
-
-
         count = 0
         # loop over names to start transform, use tqdm if one wants
         for name in tqdm(iterable=names,total=names.size, disable=tqd,position=0, leave=True):
