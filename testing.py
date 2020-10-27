@@ -19,12 +19,15 @@ df = pd.DataFrame(columns = ['Name',       'Type',             'Assets', 'TV-lif
                             ['Insurer  9', 'non-life insurer', 9000,     0,         8800,          200,         200],
                             ['Insurer 10', 'non-life insurer', 9000,     0,         8800,          200,         199.99]])
 df.set_index('Name', inplace = True)
-# df['LA'] = None
-# df['LB'] = None
-p1 = {'name'     : 'Pattern 1', 'cluster':'Type','expression':'{.*}={.*}','parameters':{'decimal':8} }
+df['LA'] = None
+df['LB'] = None
+p1 = {'name'     : 'Pattern 1','expression':'ABS({"LA"}-{"LB"})<=ABS({"LB"})*0.1','parameters':{'decimal':0, 'expres':True} }
 miner = data_patterns.PatternMiner(df)
 
 df_patterns = miner.find(p1)
 df_ana = miner.analyze()
 print(miner.df_patterns)
 print(miner.df_results)
+
+
+expres = data_patterns.to_pandas_expressions()
