@@ -299,5 +299,4 @@ def expression2pandas(g, nonzero_col, parameters):
             ex_str = ex_str + '&(df["' + column +'"].notna())'
         co_str = co_str + ']'
         ex_str = ex_str + ']'
-        print(co_str)
     return co_str, ex_str
