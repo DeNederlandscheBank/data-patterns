@@ -235,6 +235,7 @@ def expression2pandas(g, nonzero_col, parameters):
     exclude_zero_columns = parameters.get("nonzero", False)
     notNaN = parameters.get("notNaN", False)
     both_ways = parameters.get("both_ways", False)
+    expres =  parameters.get("expres", False)
     decimal = parameters.get("decimal", 0)
     if re.search('AND IF', g):
         both_ways = True
@@ -266,7 +267,7 @@ def expression2pandas(g, nonzero_col, parameters):
                 ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+'abs('+ item_cond.group(1).strip() + '-(' + item_cond.group(3).strip() + '))<1.5e' + str(decimal)+")]"
     else:
         item = re.search(r'(.*)(==)(.*)', g)
-        if item is None or (re.search(r"'(.*)'", item.group(3)) is not None and 'df[' not in item.group(3)): # take out strings except when string is from sum
+        if item is None or (re.search(r"'(.*)'", item.group(3)) is not None and 'df[' not in item.group(3)) or expres: # take out strings except when string is from sum
 
 
             co_str = 'df[('+add_brackets(g)+')&'
