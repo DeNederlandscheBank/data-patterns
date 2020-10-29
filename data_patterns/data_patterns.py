@@ -36,6 +36,8 @@ class PatternMiner:
     ----------
     dataframe : DataFrame, optional, the dataframe with data used for training and testing (optional)
     metapatterns : list of dictionaries, optional
+    data: DataFrame, optional
+    clean_quotation: boolean, optional
 
     Attributes
     ----------
@@ -54,6 +56,11 @@ class PatternMiner:
 
     data : list, shape (n_patterns,)
         Patterns with statistics and confirmation and exceptions
+
+
+    clean_quotation: boolean
+        Boolean that determines to clean the data. It will get rid of ' and " in the data and turns colomns into strings.
+
 
     Examples
     --------
@@ -107,7 +114,9 @@ class PatternMiner:
 
 
     def correct_data(self, *args, **kwargs):
-        '''General function to change data to correct value. This only works for a very simple conditional pattern. '''
+        '''General function to change data to correct value. This only works for a very simple conditional pattern. Example: Let's say
+        that we grouped LEI codes with names. And we see that some LEI codes correspond to different names. This function will take the
+        most common name and transforms to other names with that LEI code into the most common name.'''
 
         self.__process_parameters(*args, **kwargs)
 
@@ -171,7 +180,14 @@ class PatternMiner:
 
 
     def convert_columns_to_time(self, name_col, year, extra=[], tqd = False):
+        '''
+         converts a column containing dates into column names. So the data gets transformed with the time/years as columns
 
+         name_col: name of the insurance company (usually relatienaam)
+         year: column with time periods
+         extra: columns that you would like to keep seperate from the transformation
+         tqd: boolean that determines if you want to turn on tqdm
+        '''
         df = self.df_data.copy()
         # # change data to get seperate same names per year
         # df[name_col]=df[name_col]+' (' + df.groupby([year,name_col]).cumcount().add(1).astype(str) + ')'
@@ -218,32 +234,42 @@ class PatternMiner:
 
 
     def convert_to_time(self, to_index, year, to_del=[], set_year=True):
-                df_solos_01 = self.df_data.copy()
+        '''
+         Merges periods of data together in subsequent periods. So rows with 2017 and 2018 seperate will be merged into one 2017-2018 row.
+         The data of these year will be added together with the suffices (t-1) and (t)
+
+         to_index: a list of column names that will form the index together with the year column, example ['relatienaam']
+         year: column with time periods
+         to_del: columns that will be removed
+         set_year: boolean that is used if the time data contains only years
+        '''
+
+        df_solos_01 = self.df_data.copy()
 
 
-                # delete
-                for i in to_del:
-                    del df_solos_01[i]
-                if set_year:
-                    df_solos_01[year] = df_solos_01[year].apply (lambda x : x.year)
-                years = list(df_solos_01[year].unique())
+        # delete
+        for i in to_del:
+            del df_solos_01[i]
+        if set_year:
+            df_solos_01[year] = df_solos_01[year].apply (lambda x : x.year)
+        years = list(df_solos_01[year].unique())
 
 
-                for i in range(len(years)-1):
-                    df1 = df_solos_01[df_solos_01[year] == years[i]]
-                    df2 = df_solos_01[df_solos_01[year] == years[i+1]]
-                    df_new = pd.merge(df1,df2, on=to_index,suffixes=(' (t-1)', ' (t)'))
-                    df_new[year] = df_new[year + ' (t-1)'].astype(str) + ' - ' + df_new[year+ ' (t)'].astype(str)
-                    df_new =df_new.set_index([year]+to_index)
-                    if i == 0:
-                        df =df_new
-                    else:
-                        df = df.append(df_new)
-                del df[year+' (t-1)']
-                del df[year+' (t)']
-                self.df_data = df
-                self.df_data.columns = self.df_data.columns.astype(str)
-                return df
+        for i in range(len(years)-1):
+            df1 = df_solos_01[df_solos_01[year] == years[i]]
+            df2 = df_solos_01[df_solos_01[year] == years[i+1]]
+            df_new = pd.merge(df1,df2, on=to_index,suffixes=(' (t-1)', ' (t)'))
+            df_new[year] = df_new[year + ' (t-1)'].astype(str) + ' - ' + df_new[year+ ' (t)'].astype(str)
+            df_new =df_new.set_index([year]+to_index)
+            if i == 0:
+                df =df_new
+            else:
+                df = df.append(df_new)
+        del df[year+' (t-1)']
+        del df[year+' (t)']
+        self.df_data = df
+        self.df_data.columns = self.df_data.columns.astype(str)
+        return df
 
 
 
@@ -257,17 +283,14 @@ class PatternMiner:
         self.df_data = self.__process_key('dataframe', pd.DataFrame, self.df_data, *args, **kwargs)
         self.clean_quotation = self.__process_key('clean_quotation', bool, self.clean_quotation, *args, **kwargs)
 
-
-
-
         if isinstance(self.metapatterns, dict):
             self.metapatterns = [self.metapatterns]
-        if self.clean_quotation:
+
+        if self.clean_quotation: # clean data of quotation marks. Needed with data that contains names with quotations
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].astype(str)
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('"', ''))
             self.df_data.loc[:,self.df_data.dtypes==object]= self.df_data.loc[:,self.df_data.dtypes==object].apply(lambda s:s.str.replace('\'', ""))
             self.clean_quotation = False
-
 
         return None
 
@@ -1553,6 +1576,7 @@ def string_to_dict(dict_string):
 
 
 def load_overzicht(path, name, tab=0, metapattern='metapattern', template='template'):
+    ''' Load overzicht of rules. It makes a dictionary where its groups the rules per template '''
     result = {}
     df = pd.read_excel(path+name, sheet_name=tab)
     datas = df[template].unique()
