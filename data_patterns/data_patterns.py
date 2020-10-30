@@ -78,7 +78,6 @@ class PatternMiner:
         self.df_patterns = None
         self.metapatterns = None
         self.df_results = None
-        self.cluster = None
         self.clean_quotation = None
         self.__process_parameters(*args, **kwargs)
 
@@ -96,13 +95,8 @@ class PatternMiner:
 
         logger.info('Rows in data: ' + str(self.df_data.shape[0]))
 
-
-        if 'cluster' in self.metapatterns[0].keys(): # need it to save
-            self.cluster = self.metapatterns[0]['cluster']
-
         new_df_patterns = derive_patterns(**kwargs, metapatterns = self.metapatterns, dataframe = self.df_data)
 
-        self.metapatterns[0]['cluster'] = self.cluster # redo cluster
         if (not kwargs.get('append', False)) or (self.df_patterns is None):
             self.df_patterns = new_df_patterns
         else:
@@ -189,8 +183,6 @@ class PatternMiner:
          tqd: boolean that determines if you want to turn on tqdm
         '''
         df = self.df_data.copy()
-        # # change data to get seperate same names per year
-        # df[name_col]=df[name_col]+' (' + df.groupby([year,name_col]).cumcount().add(1).astype(str) + ')'
 
         # get names
         names = df[name_col].unique()
@@ -201,8 +193,7 @@ class PatternMiner:
             count += 1
             temp_df = df[df[name_col] == name]
             del temp_df[name_col] # del columns
-            # if count %100==0:
-            #     print(count,'/',df.shape[0])
+
             for item in extra:
                 items.append(temp_df[item].values[0])
                 del temp_df[item]
@@ -254,18 +245,19 @@ class PatternMiner:
             df_solos_01[year] = df_solos_01[year].apply (lambda x : x.year)
         years = list(df_solos_01[year].unique())
 
-
+        # each consecutive year
         for i in range(len(years)-1):
             df1 = df_solos_01[df_solos_01[year] == years[i]]
             df2 = df_solos_01[df_solos_01[year] == years[i+1]]
-            df_new = pd.merge(df1,df2, on=to_index,suffixes=(' (t-1)', ' (t)'))
-            df_new[year] = df_new[year + ' (t-1)'].astype(str) + ' - ' + df_new[year+ ' (t)'].astype(str)
+            df_new = pd.merge(df1,df2, on=to_index,suffixes=(' (t-1)', ' (t)')) # merge with suffices
+            df_new[year] = df_new[year + ' (t-1)'].astype(str) + ' - ' + df_new[year+ ' (t)'].astype(str) # make new year index
             df_new =df_new.set_index([year]+to_index)
             if i == 0:
                 df =df_new
             else:
                 df = df.append(df_new)
-        del df[year+' (t-1)']
+
+        del df[year+' (t-1)'] # del year columns because merged
         del df[year+' (t)']
         self.df_data = df
         self.df_data.columns = self.df_data.columns.astype(str)
@@ -386,11 +378,12 @@ def derive_patterns(dataframe   = None,
     for metapattern in metapatterns:
         parameters = metapattern.get("parameters", {})
         cluster = metapattern.get("cluster", 0)
+
         if cluster != 0: # Clusters
             clusters = dataframe[cluster].unique() # get possible clusters
             for i in clusters:
-                new_data = dataframe[dataframe[cluster] == i] # get only that data
-                metapattern['cluster'] = i
+                new_data = dataframe[dataframe[cluster] == i] # get only cluster data
+                metapattern['cluster_group'] = i # set cluster to name of cluster instead of column name
                 if "expression" in metapattern.keys():
                     patterns = derive_patterns_from_template_expression(metapattern = metapattern, # expression
                                                                         dataframe = new_data)
@@ -404,6 +397,8 @@ def derive_patterns(dataframe   = None,
                         logger.info('Reduction of rows in patterns to: ' + str(patterns.shape[0]))
 
                 df_patterns = df_patterns.append(patterns, ignore_index = True)
+
+        # if no cluster
         else:
             if "expression" in metapattern.keys():
                 patterns = derive_patterns_from_template_expression(metapattern = metapattern, # expression
@@ -419,7 +414,7 @@ def derive_patterns(dataframe   = None,
 
             df_patterns = df_patterns.append(patterns, ignore_index = True)
 
-    if cluster == 0 :
+    if cluster == 0:
         df_patterns[CLUSTER] = df_patterns[CLUSTER].astype(np.int64)
     df_patterns[SUPPORT] = df_patterns[SUPPORT].astype(np.int64)
     df_patterns[EXCEPTIONS] = df_patterns[EXCEPTIONS].astype(np.int64)
@@ -479,7 +474,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
 
     parameters = metapattern.get("parameters", {})
     name = metapattern.get('name', "No name")
-    cluster = metapattern.get('cluster', 0)
+    cluster = metapattern.get('cluster_group', 0)
 
     confidence, support = get_parameters(parameters)
 
@@ -518,6 +513,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
                                  parameters = parameters,cluster=cluster)
         for pat in sums:
             patterns.extend(pat)
+
     else:
         item2 = re.search(r'(.*?)([!=|<=|>=|>|<|=])(.*)', expression)
         pattern = item2.group(2)
@@ -528,6 +524,8 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
             item3 = item3[1:]
 
         if '{' in item3: # column comparing pattern
+
+            # right format
             P_columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
             Q_columns = get_possible_columns(item3.count('.*'), item3, dataframe,True)
             Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
@@ -563,7 +561,10 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
 
 def get_possible_columns(amount, expression, dataframe, quant=False):
     """
-    Get the possible columns for the conitional expression using regex
+    Get the possible columns for an expression using regex
+
+    amount: amount of columns that we are left open
+    quant: needed for standard quantitative expressions such as sum and column column comparing
     """
 
     # no regex columns, then jut return it
@@ -581,7 +582,7 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
             continue
         d = d.strip().split(',')
         columns = []
-        for item in d:
+        for item in d: # get all possible columns for that place
             for col in dataframe.columns:
                 if re.search(item, col):
                     columns.append(re.search(item, col).group(0))
@@ -618,6 +619,8 @@ def get_possible_values(amount, possible_expressions, dataframe):
     """
     Get the possible values for the conitional expression
 
+    amount: amount of values that we are left open
+
     """
 
     if amount < 1: # no values to be found
@@ -631,7 +634,7 @@ def get_possible_values(amount, possible_expressions, dataframe):
                 value_col = value_col[2:-2] # strip { and }
                 all_columns.append(value_col)
 
-            all_columns_v = dataframe[all_columns].drop_duplicates().values
+            all_columns_v = dataframe[all_columns].drop_duplicates().values # get possibilities
 
             items =  re.findall(r'\[(.*?@)\]', possible_expression) # Find the columns
             del_rows = []
@@ -654,7 +657,7 @@ def get_possible_values(amount, possible_expressions, dataframe):
                 possible_expression_v = possible_expression
                 for column_v in columns_v:
                     if isinstance(column_v, str):
-                        possible_expression_v = possible_expression_v.replace('[@]', '"'+ column_v +'"', 1) # replace adn add ""
+                        possible_expression_v = possible_expression_v.replace('[@]', '"'+ column_v +'"', 1) # replace and add ""
                     else:
                         possible_expression_v = possible_expression_v.replace('[@]', str(column_v), 1) # replace with str
                 expressions.append(possible_expression_v)
@@ -693,7 +696,7 @@ def derive_patterns_from_expression(expression = "",
     parameters = metapattern.get("parameters", {})
     solvency = parameters.get("solvency", False)
     disable = parameters.get("disable", False)
-    cluster = metapattern.get("cluster", 0)
+    cluster = metapattern.get("cluster_group", 0)
 
     name = metapattern.get('name', "No name")
     encode = metapattern.get(ENCODE, {})
@@ -852,11 +855,6 @@ def derive_conditional_pattern(dataframe = None,
 
 
 
-
-
-
-
-
 def get_parameters(parameters):
     """
     Gives confidence and support, also if not given in parameters
@@ -888,7 +886,7 @@ def derive_quantitative_pattern(metapattern = None,
     decimal = parameters.get("decimal", 8)
     P_dataframe = metapattern.get("P_dataframe", None)
     Q_dataframe = metapattern.get("Q_dataframe", None)
-    cluster = metapattern.get("cluster", 0)
+    cluster = metapattern.get("cluster_group", 0)
 
     if (P_dataframe is not None) and (Q_dataframe is not None):
         try:
@@ -1136,15 +1134,10 @@ def patterns_sums_column( dataframe  = None,
     logger = logging.getLogger(__name__)
 
 
-
-
     confidence, support = get_parameters(parameters)
     sum_elements = parameters.get("sum_elements", 2)
     decimal = parameters.get("decimal", 0)
     disable = parameters.get("disable", False)
-
-
-
 
     initial_data_array = dataframe.values.T
     parameters['nonzero'] = True
@@ -1289,6 +1282,8 @@ def update_statistics(dataframe = None,
             # Calculate pattern statistics (from evaluating pandas expressions)
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
+
+            # in case of cluster we need to alter the data
             if df_patterns.loc[idx, CLUSTER] != 0:
                 new_dataframe = dataframe[dataframe[metapatterns[0]['cluster']]==df_patterns.loc[idx, CLUSTER]]
             else:
@@ -1370,6 +1365,8 @@ def derive_results(dataframe = None,
             # print(idx)
             encode = df_patterns.loc[idx, ENCODINGS]
             cluster = df_patterns.loc[idx, CLUSTER]
+
+            # in case we have clusters, we need to alter the data
             if df_patterns.loc[idx, CLUSTER] != 0:
                 df = df_tot[df_tot[metapatterns[0]['cluster']]==df_patterns.loc[idx, CLUSTER]]
             else:
@@ -1576,7 +1573,15 @@ def string_to_dict(dict_string):
 
 
 def load_overzicht(path, name, tab=0, metapattern='metapattern', template='template'):
-    ''' Load overzicht of rules. It makes a dictionary where its groups the rules per template '''
+    '''
+    Load overzicht of rules. It makes a dictionary where its groups the rules per template
+
+    path: path to file
+    name: filename
+    tab: tab name of file
+    metapattern: the column name of the metapatterns
+    template: the column name of the templates
+    '''
     result = {}
     df = pd.read_excel(path+name, sheet_name=tab)
     datas = df[template].unique()

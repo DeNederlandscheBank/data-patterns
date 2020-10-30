@@ -410,7 +410,7 @@ class TestData_patterns(unittest.TestCase):
         df_patterns = miner.convert_columns_to_time('Name','periode')
         actual = df_patterns.reset_index()
         # Expected output
-        expected = pd.DataFrame(columns = ['Name', 'Datapoint', 2018, 2019],
+        expected = pd.DataFrame(columns = ['Name', 'Datapoint', '2018', '2019'],
                                 data = [['Insurer  1', 'Assets' ,1000 ,800],
                                 ['Insurer  2', 'Assets', 4000 ,2500]])
 

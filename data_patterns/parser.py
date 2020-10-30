@@ -256,20 +256,19 @@ def expression2pandas(g, nonzero_col, parameters):
                 decimal = -decimal
             item_cond = re.search(r'(.*)(==)(.*)', item.group(2))
 
-
-
-            # only when multiple columns after THEN
+            # only do this when df = df after THEN
             if item_cond is None or 'df[' not in item_cond.group(3): # take out strings except when string is from sum
                 co_str = 'df[('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")]"
                 ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+")]"
             else:
                 co_str = 'df[('+add_brackets(item.group(1))+') & ('+'abs('+ item_cond.group(1).strip() + '-(' + item_cond.group(3).strip() + '))<1.5e' + str(decimal)+")]"
                 ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+'abs('+ item_cond.group(1).strip() + '-(' + item_cond.group(3).strip() + '))<1.5e' + str(decimal)+")]"
+
     else:
         item = re.search(r'(.*)(==)(.*)', g)
-        if item is None or (re.search(r"'(.*)'", item.group(3)) is not None and 'df[' not in item.group(3)) or expres: # take out strings except when string is from sum
 
-
+        # use decimales only when we have columns or integer after the = sign (and not an expression)
+        if item is None or (re.search(r"'(.*)'", item.group(3)) is not None and 'df[' not in item.group(3)) or expres:
             co_str = 'df[('+add_brackets(g)+')&'
             ex_str = 'df[~('+add_brackets(g)+')&'
             if exclude_zero_columns:
@@ -278,8 +277,8 @@ def expression2pandas(g, nonzero_col, parameters):
                     ex_str += '(' + i +'!=0)&'
             co_str = co_str[:-1] + ']'
             ex_str = ex_str[:-1] + ']'
+
         else:
-            # decimal = parameters.get("decimal", 0)
             g_co = 'abs('+ item.group(1).strip() + '-(' + item.group(3).strip() + '))<1.5e' + str(decimal)
             g_ex = 'abs(' + item.group(1).strip() + '-(' + item.group(3).strip() + '))>=1.5e' + str(decimal)
             co_str = 'df[('+g_co+')&'
