@@ -1273,12 +1273,24 @@ def update_statistics(dataframe = None,
     '''Update statistics in df_patterns with statistics from the data by evaluating pandas expressions
     '''
     encodings = get_encodings()
-    df_new_patterns = pd.DataFrame()
     if (dataframe is not None) and (df_patterns is not None):
         # adding the levels of the index to the columns (so they can be used for finding rules)
         for level in range(len(dataframe.index.names)):
             dataframe[dataframe.index.names[level]] = dataframe.index.get_level_values(level = level)
+
         for idx in df_patterns.index:
+
+            # make sure to only evaluate rules that have the columns of the dataframe
+            key_in =True
+            keys = re.findall(r'{(.*?)}', df_patterns.loc[idx, PATTERN_DEF])
+            for key in keys:
+                if key[1:-1] not in dataframe.columns:
+                    key_in = False
+                    break
+            if key_in == False:
+                df_patterns = df_patterns.drop(index=idx)
+                continue
+
             # Calculate pattern statistics (from evaluating pandas expressions)
             pandas_co = df_patterns.loc[idx, PANDAS_CO]
             pandas_ex = df_patterns.loc[idx, PANDAS_EX]
@@ -1311,9 +1323,8 @@ def update_statistics(dataframe = None,
                 df_patterns.loc[idx, ERROR] = 'ERROR unknown'
 
 
-            df_new_patterns = df_patterns
 
-    return df_new_patterns
+    return df_patterns
 
 
 
