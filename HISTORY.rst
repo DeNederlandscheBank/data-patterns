@@ -95,3 +95,5 @@ You can now add a boolean to the miner. If you give the boolean True to the mine
     
 1. Convert_to_time: add boolean set_year. If true then only use the years (this is for yearly data), otherwise keep whole date. Set to True standard
 
+2. update_statistics: Remove patterns that contain columns which are not in the data. This is necessary for some insurers so that they do not get errors
+
