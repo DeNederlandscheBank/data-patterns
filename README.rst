@@ -98,7 +98,7 @@ Read the documentation for more features.
 Upload to Pypi (for developers)
 -------------------------------
 
-1. Change the version in setup.py
+1. Change the version in setup.py and setup.cfg
 2. Go to github.com and navigate to the repository. Next, click on the tab “releases” and then on “Create a new release”. Now, define a Tag verion (it is best to use the same number as you used in your setup.py version-field: v0.1.15 for example). Then click on “publish release”.
 3. Make a Pypi account here: https://pypi.org/manage/projects/
 4. Download twine by typing in your command prompt::
