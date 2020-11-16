@@ -106,7 +106,8 @@ Upload to Pypi (for developers)
     pip install twine
 
 5. Get admin rights of the owner of the data_patterns package.
-6. Open your command prompt and go to the folder of data_patterns. Then type
+6. Delete the old files in the dist folder
+7. Open your command prompt and go to the folder of data_patterns. Then type
 
     python setup.py sdist
 
