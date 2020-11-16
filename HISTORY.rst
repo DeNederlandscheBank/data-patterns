@@ -72,7 +72,7 @@ Added the function correct_data. This corrects data based on the most common val
 1. Add tqdm progress bars 
 
 
-0.1.18 (coming soon)
+0.1.18 (16-11-2020)
 --------------------
 
     variables to miner
