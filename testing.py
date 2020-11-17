@@ -24,10 +24,11 @@ df['LB'] = np.nan
 df['LA'].iloc[3] = 1
 df['LB'].iloc[3] = 1
 print(df)
-p1 = {'name'     : 'Pattern 1','expression':'ABS({"LA"}-{"LB"})<=ABS({"LB"})*0.1','parameters':{'min_support':0,'min_confidence':0,'decimal':0, 'expres':True, 'notNaN' :True} }
+p1 = {'name'     : 'Pattern 1','expression':'IF {"Assets"} > 0 THEN {"Excess"} > 0','parameters':{'min_support':0,'min_confidence':0,'decimal':0, 'expres':True, 'notNaN' :True} }
 miner = data_patterns.PatternMiner(df)
 
 df_patterns = miner.find(p1)
+miner.df_data['Assets'] = 0
 df_ana = miner.analyze()
 print(miner.df_patterns)
 print(miner.df_results)
