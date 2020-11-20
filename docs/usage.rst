@@ -65,33 +65,6 @@ The result is a DataFrame with the results. If we select ``result_type = False``
 
 Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum' (see below), and '-->' (association, see below).
 
-Setting the parameters dict
----------------------------
-
-Specific parameters of a pattern can be set with a parameters dict. ``min_confidence`` defines the minimum confidence of the patterns to be included in the output and ``min_support`` defines the minimum support of the patterns. 
-
-For the =-patterns, you can set the number of decimals for the equality between the values with ``decimal``. So::
-
-    df_patterns = miner.find({'name'      : 'equal values',
-                              'pattern'   : '=',
-                              'parameters': {"min_confidence": 0.5,
-                                             "min_support"   : 2,
-                                             "decimal"       : 0}})
-
-would output
-
-+----+--------------+---------------------------+----------+-----------+----------+
-| id |pattern_id    |pattern_def                |support   |exceptions |confidence|
-+====+==============+===========================+==========+===========+==========+
-|  0 |equal values  | {Own funds} = {Excess}    |10        |0          |1.0       |
-+----+--------------+---------------------------+----------+-----------+----------+
-
-because 199.99 is equal to 200 with 0 decimals.
-
-The default value in the =-pattern is 0 decimals.
-
-You do not have to include a paramaters dict. The parameters have default setting with ``min_confidence = 0.75`` and ``min_support = 2``.
-
 
 Using conditional pattern
 -------------------------
@@ -188,10 +161,122 @@ This will give the same result as the equal, conditional and sum pattern.
 Expressions can be written as followed:
 
 1. Put it in a structure like above
-2. Columns are given with '{}', example: '{Assests} > 0'
+2. Columns are given with '{}', example: '{"Assests"} > 0'
 3. If you want to find matches with columns you can do '{.*}' (this will match all columns), example: '{.*TV.*} > 0' (will match TV-life and TV-nonlife)
 4. Conditional statements go with IF, THEN together with & and | (and/or), example: 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) & {.*As.*} > 0)' Note: AND is only used when you want the reverse of this statement, such as 'IF ({.*TV-life.*} = 0) THEN ({.*TV-nonlife.*} = 8800) & {.*As.*} > 0) AND IF ({.*TV-life.*} = 0) THEN ~({.*TV-nonlife.*} = 8800) & {.*As.*} > 0)'
 5. Use [@] if you do not have a specific value, example: 'IF ({.*Ty.*} = [@]) THEN ({.*As.*} = [@])'
+6. You can also use regex in front of @ such as ({.*Ty.*} = ["non-life"@]), which would only match 'non-life insurer'
+7. you can also use multiple columns: 'IF ({.*TV-life.*,TV-nonlife.*} = 0)'. This would match both columns.
+
+Summary of patterns
+--------------------
+
+There are two categories:
+
+1. conditional: IF THEN
+
+2. Quantitative: Sum, col_a = col_b, col_a > value
+
+One can also do more complex quantitative patterns such as: '{"Col_A"}*{"Col_B"}/{"Col_C"}={"Col_D"}. However on must use the parameter expres:True for this to work. It can only be used when it is directly used as a pandas expression to find patterns and that is why you need the parameter.
+
+You can also use the following in expressions: MAX, MIN, SUM, ABS. Such as ABS({"Col_A"}-{"Col_B"}) = {"Col_C"}.
+
+Setting the parameters dict
+---------------------------
+
+Specific parameters of a pattern can be set with a parameters dict. ``min_confidence`` defines the minimum confidence of the patterns to be included in the output and ``min_support`` defines the minimum support of the patterns. 
+
+For the =-patterns, you can set the number of decimals for the equality between the values with ``decimal``. So::
+
+    df_patterns = miner.find({'name'      : 'equal values',
+                              'pattern'   : '=',
+                              'parameters': {"min_confidence": 0.5,
+                                             "min_support"   : 2,
+                                             "decimal"       : 0}})
+
+would output
+
++----+--------------+---------------------------+----------+-----------+----------+
+| id |pattern_id    |pattern_def                |support   |exceptions |confidence|
++====+==============+===========================+==========+===========+==========+
+|  0 |equal values  | {Own funds} = {Excess}    |10        |0          |1.0       |
++----+--------------+---------------------------+----------+-----------+----------+
+
+because 199.99 is equal to 200 with 0 decimals.
+
+The default value in the =-pattern is 0 decimals.
+
+You do not have to include a paramaters dict. The parameters have default setting with ``min_confidence = 0.75`` and ``min_support = 2``.
+
+A list of parameters that you can use:
+
+    - min_confidence (0.75): float [0,1] or 'highest'
+    - min_support(2): int > 0
+    - decimal (0): int. Used for rounding and comparing values to that decimal
+    - window (None): int. Only compare columns in that window
+    - disable (False): boolean. Disables tqdm bars
+    - expres (Flase): boolean. Uses pandas expression to find patterns and does not use the numpy dissection (needed for quant patterns not following the standerd format)
+    - nonNaN (False): boolean. Ignores NaN values
+    - nonzero(Flase): boolean. Ignores 0 values
+    
+
+Convert columns to time
+-----------------------
+
+We also wanted to look at time patterns. Therefore we had to transform tables into another format. We have two possible formats:
+
+1. convert_to_time():
+
+This column matches names and consecutive periodes into one row with a prefix
+
++------+-----------+--------------+
+| Name | periode   |Assets        | 
++======+===========+==============+
+|Ins1  |2018       |1000          |
++------+-----------+--------------+
+|Ins2  |2018       |2000          |
++------+-----------+--------------+
+|Ins1  |2019       |1500          |
++------+-----------+--------------+
+|Ins2  |2019       | 2015         |
++------+-----------+--------------+
+
+will transform into
+
++------+-----------+--------------+-------------+
+| Name | periode   |Assets (t-1)  | Assets (t)  | 
++======+===========+==============+=============+
+|Ins1  |2018-2019  |1000          | 1500        |
++------+-----------+--------------+-------------+
+|Ins2  |2018-2019  |2000          | 2015        |
++------+-----------+--------------+-------------+
+
+You can set set_year=False if you are note dealing with whole years.
+
+2. convert_columns_to_time():
+
++------+-----------+--------------+
+| Name | periode   |Assets        | 
++======+===========+==============+
+|Ins1  |2018       |1000          |
++------+-----------+--------------+
+|Ins2  |2018       |2000          |
++------+-----------+--------------+
+|Ins1  |2019       |1500          |
++------+-----------+--------------+
+|Ins2  |2019       | 2015         |
++------+-----------+--------------+
+
+will transform into
+
++------+-----------+--------------+-------------+
+| Name | Datapoint |2018          | 2019        | 
++======+===========+==============+=============+
+|Ins1  |Assets     |1000          | 1500        |
++------+-----------+--------------+-------------+
+|Ins2  |Assets     |2000          | 2015        |
++------+-----------+--------------+-------------+
+
 
 
 Finding a list of patterns
