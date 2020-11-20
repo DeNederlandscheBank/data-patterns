@@ -278,6 +278,21 @@ will transform into
 +------+-----------+--------------+-------------+
 
 
+Correct data
+------------
+Sometimes you want to correct data, such as
+
++------+-----------+
+| LEI  | Name      |
++======+===========+
+|1005  |BANK       |
++------+-----------+
+|1005  |BANK       |
++------+-----------+
+|1005  |Bank       |
++------+-----------+
+ where you want all the names to be the same for the same code. If you perform a simple conditional pattern with conf 'highest', you can use the function correct_data() to change the names.
+
 
 Finding a list of patterns
 --------------------------
