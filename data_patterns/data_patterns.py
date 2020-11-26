@@ -484,20 +484,21 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
     dataframe = dataframe[numerical_columns]
 
     patterns = list()
-
-    if '+' in expression: # Sum pattern
+    print('Make sure the pattern is a standard form of sum, column comparison or value comparison. If you have a special arithmatic, use the parameter "express":True')
+    columns = re.findall(r'({.*?})', expression)
+    if len(columns) > 2: # Sum pattern
         sum_elements = expression.count('+') + 1
         parameters['sum_elements'] = sum_elements
         P_columns = []
         Q_columns = []
-        for match in re.finditer(r'(.*?)[+|=]', expression): # Get P_columns
-            possible_col = get_possible_columns(match.group(1).count('.*'), match.group(1),dataframe,True)
+        for item in columns[:-1]: # Get P_columns
+            possible_col = get_possible_columns(item.count('.*'),item,dataframe,True)
             P_columns = P_columns + possible_col
             P_columns = list(set(P_columns))
-        for match in re.finditer(r'=(.*)', expression): # Get Q_columns
-            possible_col = get_possible_columns(match.group(1).count('.*'), match.group(1),dataframe,True)
-            Q_columns = Q_columns + possible_col
-            Q_columns = list(set(Q_columns))
+        item = columns[-1] # Get Q_columns
+        possible_col = get_possible_columns(item.count('.*'),item,dataframe,True)
+        Q_columns = Q_columns + possible_col
+        Q_columns = list(set(Q_columns))
 
         # Right format
         Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
@@ -523,15 +524,16 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
             pattern += '='
             item3 = item3[1:]
 
-        if '{' in item3: # column comparing pattern
+        if len(columns)==2: # column comparing pattern
 
             # right format
-            P_columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
-            Q_columns = get_possible_columns(item3.count('.*'), item3, dataframe,True)
+            P_columns = get_possible_columns(columns[0].count('.*'), columns[0],dataframe,True)
+            Q_columns = get_possible_columns(columns[1].count('.*'), columns[1], dataframe,True)
             Q_columns = [dataframe.columns.get_loc(c) for c in Q_columns if c in numerical_columns]
             P_columns = [dataframe.columns.get_loc(c) for c in P_columns if c in numerical_columns]
             Q_columns.sort()
             P_columns.sort()
+
             compares = patterns_column_column(dataframe  = dataframe,
                                     pattern = pattern,
                                      pattern_name = name,
@@ -542,7 +544,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
                 patterns.extend(pat)
 
         else: # column value
-            columns = get_possible_columns(item2.group(1).count('.*'), item2.group(1),dataframe,True)
+            columns = get_possible_columns(columns[0].count('.*'), columns[0],dataframe,True)
             value = float(item3)
             columns = [dataframe.columns.get_loc(c) for c in columns if c in numerical_columns]
             columns.sort()
@@ -570,7 +572,7 @@ def get_possible_columns(amount, expression, dataframe, quant=False):
     # no regex columns, then jut return it
     if amount == 0:
         if quant:
-            return [expression.strip()[1:-1]]
+            return [expression.strip()[2:-2]]
         else:
             return [expression]
 
@@ -883,7 +885,7 @@ def derive_quantitative_pattern(metapattern = None,
     logger.info(' Calling function derive_quantitative_pattern')
 
     confidence, support = get_parameters(parameters)
-    decimal = parameters.get("decimal", 8)
+    decimal = parameters.get("decimal", 0)
     P_dataframe = metapattern.get("P_dataframe", None)
     Q_dataframe = metapattern.get("Q_dataframe", None)
     cluster = metapattern.get("cluster_group", 0)
@@ -1147,7 +1149,7 @@ def patterns_sums_column( dataframe  = None,
 
 
     count = 0
-    neg_col = [1]*len(Q_columns)
+    neg_col = [1]*n
     for lhs_elements in range(2, sum_elements + 1):
         for rhs_column in tqdm(iterable = Q_columns, total=len(Q_columns), disable = disable, position = 0, leave=True):
             start_array = initial_data_array
@@ -1158,7 +1160,6 @@ def patterns_sums_column( dataframe  = None,
             except:
                 continue
             lhs_column_list = [col for col in P_columns if (col != rhs_column)]
-
 
             # make combinations
             for lhs_columns in itertools.combinations(lhs_column_list, lhs_elements):

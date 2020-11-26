@@ -251,9 +251,6 @@ def expression2pandas(g, nonzero_col, parameters):
             co_str = 'df[(('+add_brackets(item.group(1))+') & ('+add_brackets(item.group(2))+")) | (~("+add_brackets(item.group(1)) +")& ~("+add_brackets(item.group(2))+ "))]"
             ex_str = 'df[('+add_brackets(item.group(1))+') & ~('+add_brackets(item.group(2))+") | (~("+add_brackets(item.group(1)) +")& ("+add_brackets(item.group(2))+ "))]"
         else:
-            decimal = parameters.get("decimal", 8)
-            if decimal != 0:
-                decimal = -decimal
             item_cond = re.search(r'(.*)(==)(.*)', item.group(2))
 
             # only do this when df = df after THEN
