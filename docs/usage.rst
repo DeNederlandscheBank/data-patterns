@@ -51,9 +51,9 @@ The result is a DataFrame with the patterns that were found. The first part of t
 The miner finds one patterns; it states that the 'Own funds'-column is identical to the 'Excess'-column in 9 of the 10 cases (with a confidence of 90 %, there is one case where the equal-pattern does not hold).
 
 
-To analyze data with the generated set of data-patterns use the analyze function with the dataframe with the data as input::
+To analyze data with the generated set of data-patterns use the analyze function::
 
-    df_results = miner.analyze(df)
+    df_results = miner.analyze()
 
 The result is a DataFrame with the results. If we select ``result_type = False`` then the first part of the output contains
 
@@ -62,6 +62,11 @@ The result is a DataFrame with the results. If we select ``result_type = False``
 +-----------+--------------+-------------+---------------------------+----------+-----------+----------+---------+---------+
 |Insurer 10 |False         |equal values | {Own funds} = {Excess}    |9         |1          |0.9       |200      |199.99   |
 +-----------+--------------+-------------+---------------------------+----------+-----------+----------+---------+---------+
+
+Note: In case that you have predefined patterns, you need to run it like this
+
+miner = data_patterns.PatternMiner(df_patterns=predefined_patterns)
+results = miner.analyze(df)
 
 Other patterns you can use are '>', '<', '<=', '>=', '!=', 'sum' (see below), and '-->' (association, see below).
 
@@ -152,7 +157,7 @@ We can also find the same patterns as above using expressions::
                                              "min_support"   : 2}})
                                              
     df_patterns = miner.find({'name'      : 'sum pattern',
-                              'expression'   : '{.*} + {.*} = {.*}',
+                              'expression'   : '{.*} + {.*} = {.*}', # example {"TV-life"} + {"Own funds"} = {"Assets"}
                               'parameters': {"min_confidence": 0.5,
                                              "min_support"   : 2}})
 
@@ -212,11 +217,11 @@ A list of parameters that you can use:
 
     - min_confidence (0.75): float [0,1] or 'highest'
     - min_support(2): int > 0
-    - decimal (0): int. Used for rounding and comparing values to that decimal
+    - decimal (0): int. Used for rounding and comparing values to that decimal. Can be negative and then values will be rounded to the nearest 10th (for -1), 100th for (-2), etc 
     - window (None): int. Only compare columns in that window
     - disable (False): boolean. Disables tqdm bars
     - expres (Flase): boolean. Uses pandas expression to find patterns and does not use the numpy dissection (needed for quant patterns not following the standerd format)
-    - nonNaN (False): boolean. Ignores NaN values
+    - nonNaN (False): boolean. Ignores NaN values, otherwise one can have patterns with NaN values taken into account.
     - nonzero(Flase): boolean. Ignores 0 values
     
 
