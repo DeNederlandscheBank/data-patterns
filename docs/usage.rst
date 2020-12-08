@@ -220,8 +220,7 @@ A list of parameters that you can use:
     - decimal (0): int. Used for rounding and comparing values to that decimal. Can be negative and then values will be rounded to the nearest 10th (for -1), 100th for (-2), etc 
     - window (None): int. Only compare columns in that window
     - disable (False): boolean. Disables tqdm bars
-    - expres (False): boolean. Uses pandas expression to find patterns and does not use the numpy dissection (needed for quant patterns not following the standerd format)
-    example: '{"A"}/{"B"} *{"C"}={"D"}. One would use expres is True for this pattern since we do not have a standard quantitative pattern for this  
+    - expres (False): boolean. Uses pandas expression to find patterns and does not use the numpy dissection (needed for quant patterns not following the standerd format) example: '{"A"}/{"B"} *{"C"}={"D"}. One would use expres is True for this pattern since we do not have a standard quantitative pattern for this  
     - nonNaN (False): boolean. Ignores NaN values, otherwise one can have patterns with NaN values taken into account.
     - nonzero(False): boolean. Ignores 0 values
     
