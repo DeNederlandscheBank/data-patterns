@@ -220,11 +220,33 @@ A list of parameters that you can use:
     - decimal (0): int. Used for rounding and comparing values to that decimal. Can be negative and then values will be rounded to the nearest 10th (for -1), 100th for (-2), etc 
     - window (None): int. Only compare columns in that window
     - disable (False): boolean. Disables tqdm bars
-    - expres (Flase): boolean. Uses pandas expression to find patterns and does not use the numpy dissection (needed for quant patterns not following the standerd format)
+    - expres (False): boolean. Uses pandas expression to find patterns and does not use the numpy dissection (needed for quant patterns not following the standerd format)
+    example: '{"A"}/{"B"} *{"C"}={"D"}. One would use expres is True for this pattern since we do not have a standard quantitative pattern for this  
     - nonNaN (False): boolean. Ignores NaN values, otherwise one can have patterns with NaN values taken into account.
-    - nonzero(Flase): boolean. Ignores 0 values
+    - nonzero(False): boolean. Ignores 0 values
     
+    
+Cluster
+-------
 
+When you want to find a pattern, you can also cluster the dataframe in this way:
+    df_patterns = miner.find({'name'      : 'equal values',
+                                'cluster'  : *column name*
+                              'expression'   : '{.* }={.*}',
+                              'parameters': {"min_confidence": 0.5,
+                                             "min_support"   : 2}})
+
+ You can enter a column at the place after cluster, such as 'Type'. This will split the dataframe in smaller frames based on the unique values in the column, so here we find patterns on the dataframe only containing 'life insurer' and patterns on the dataframe only containing 'non-life insurer'.
+ 
++----+--------------+---------------------------+----------+-----------+----------+------------------+
+| id |pattern_id    |pattern_def                |support   |exceptions |confidence| cluster          |
++====+==============+===========================+==========+===========+==========+==================+
+|  0 |equal values  | {Own funds} = {Excess}    |5         |0          |1         |'life insurer'    |
++----+--------------+---------------------------+----------+-----------+----------+------------------+
+|  1 |equal values  | {Own funds} = {Excess}    |4         |1          |0.8       |'non-life insurer'|
++----+--------------+---------------------------+----------+-----------+----------+------------------+
+
+ 
 Convert columns to time
 -----------------------
 
@@ -282,6 +304,7 @@ will transform into
 |Ins2  |Assets     |2000          | 2015        |
 +------+-----------+--------------+-------------+
 
+now we can find time related patterns, since the columns are the years.
 
 Correct data
 ------------
@@ -321,6 +344,8 @@ You might wish to apply to encode one or more columns before generating data-pat
     miner = data_patterns.PatternMiner(p)
 
 The function ``reported`` is a simple function that returns "not reported" if the value is nan or zero and "reported" otherwise. 
+
+There are also other functions such as percentage, which transforms ratios to percentages and EEA_country, which returns 'EEA' if a country is in the european economic area.
 
 This pattern-definition finds conditional patterns ('-->') between 'Type' and whether the columns 'Assets', 'TV-life', 'TV-nonlife', 'Own funds' are reported or not.
 
