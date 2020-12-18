@@ -484,7 +484,7 @@ def derive_quantitative_pattern_expression(expression, metapattern, dataframe):
     dataframe = dataframe[numerical_columns]
 
     patterns = list()
-    print('Make sure the pattern is a standard form of sum, column comparison or value comparison. If you have a special arithmatic, use the parameter "express":True')
+    print('Make sure the pattern is a standard form of sum, column comparison or value comparison. If you have a special arithmatic, use the parameter "expres":True')
     columns = re.findall(r'({.*?})', expression)
     if len(columns) > 2: # Sum pattern
         sum_elements = expression.count('+') + 1
