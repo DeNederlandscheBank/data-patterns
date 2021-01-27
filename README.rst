@@ -7,7 +7,7 @@ data-patterns
         :target: https://pypi.python.org/pypi/data_patterns
         :alt: Pypi Version
 .. image:: https://img.shields.io/travis/DeNederlandscheBank/data-patterns.svg
-        :target: https://travis-ci.org/DeNederlandscheBank/data-patterns
+        :target: https://travis-ci.com/DeNederlandscheBank/data-patterns
         :alt: Build Status
 .. image:: https://readthedocs.org/projects/data-patterns/badge/?version=latest
         :target: https://data-patterns.readthedocs.io/en/latest/?badge=latest
